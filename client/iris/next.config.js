@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Enable standalone output for optimized Docker builds
+  output: 'standalone',
   transpilePackages: ['@iris-aegis/protocol'],
   experimental: {
     serverActions: {
