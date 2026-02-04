@@ -1,0 +1,77 @@
+version: '3.9'
+
+services:
+  # Iris - Frontend UI (Next.js)
+  iris:
+    build:
+      context: ./client/iris
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_AEGIS_URL=http://aegis:8080
+    volumes:
+      - ./client/iris:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - aegis
+    networks:
+      - vibe-network
+
+  # Aegis - Backend Orchestrator (Node.js)
+  aegis:
+    build:
+      context: ./server/aegis
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=development
+      - MAX_WORKER_SLOTS=16
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./server/aegis:/app
+      - /app/node_modules
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - redis
+    networks:
+      - vibe-network
+
+  # Redis for job queue and state management
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - vibe-network
+
+  # Worker pool manager (for agent execution)
+  worker-pool:
+    build:
+      context: ./server/aegis
+      dockerfile: Dockerfile.worker
+    environment:
+      - AEGIS_URL=http://aegis:8080
+      - WORKER_POOL_SIZE=16
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - workspace-data:/workspace
+    depends_on:
+      - aegis
+    networks:
+      - vibe-network
+    deploy:
+      replicas: 1
+
+networks:
+  vibe-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  workspace-data:
