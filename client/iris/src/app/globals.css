@@ -1,0 +1,216 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@layer base {
+  :root {
+    --background: 15 23 42;
+    --foreground: 248 250 252;
+    --muted: 100 116 139;
+    --accent: 99 102 241;
+    --accent-hover: 79 70 229;
+    --border: 51 65 85;
+    --card: 30 41 59;
+    --card-hover: 51 65 85;
+    --success: 16 185 129;
+    --warning: 245 158 11;
+    --error: 239 68 68;
+  }
+
+  * {
+    @apply border-dark-700;
+  }
+
+  body {
+    @apply bg-dark-900 text-dark-50 antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Custom scrollbar for dark theme */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-dark-900;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-dark-600 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-dark-500;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-dark-800/80 backdrop-blur-xl border border-dark-700/50 rounded-xl;
+  }
+
+  .glass-panel-hover {
+    @apply glass-panel hover:bg-dark-700/80 hover:border-dark-600/50 transition-all duration-200;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 bg-dark-800 border border-dark-700 rounded-lg
+           text-dark-50 placeholder-dark-500
+           focus:outline-none focus:ring-2 focus:ring-iris-500/50 focus:border-iris-500
+           transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-iris-600 hover:bg-iris-500 text-white font-medium
+           rounded-lg shadow-lg shadow-iris-600/25
+           hover:shadow-iris-500/30 hover:shadow-xl
+           focus:outline-none focus:ring-2 focus:ring-iris-500/50
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-dark-700 hover:bg-dark-600 text-dark-100 font-medium
+           rounded-lg border border-dark-600 hover:border-dark-500
+           focus:outline-none focus:ring-2 focus:ring-dark-500/50
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transition-all duration-200;
+  }
+
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+
+  .status-idle {
+    @apply status-badge bg-dark-700 text-dark-400;
+  }
+
+  .status-working {
+    @apply status-badge bg-blue-500/20 text-blue-400 animate-pulse;
+  }
+
+  .status-success {
+    @apply status-badge bg-emerald-500/20 text-emerald-400;
+  }
+
+  .status-error {
+    @apply status-badge bg-red-500/20 text-red-400;
+  }
+
+  .status-warning {
+    @apply status-badge bg-amber-500/20 text-amber-400;
+  }
+
+  /* Chat message styles */
+  .message-user {
+    @apply bg-iris-600/20 border border-iris-500/30 text-dark-100;
+  }
+
+  .message-assistant {
+    @apply bg-dark-800 border border-dark-700 text-dark-200;
+  }
+
+  .message-system {
+    @apply bg-dark-700/50 border border-dark-600/50 text-dark-400 italic;
+  }
+
+  /* Mermaid diagram overrides for dark theme */
+  .mermaid {
+    @apply bg-transparent;
+  }
+
+  .mermaid .node rect,
+  .mermaid .node circle,
+  .mermaid .node ellipse,
+  .mermaid .node polygon {
+    fill: rgb(30 41 59) !important;
+    stroke: rgb(99 102 241) !important;
+    stroke-width: 2px !important;
+  }
+
+  .mermaid .node .label {
+    color: rgb(248 250 252) !important;
+  }
+
+  .mermaid .edgePath .path {
+    stroke: rgb(100 116 139) !important;
+    stroke-width: 2px !important;
+  }
+
+  .mermaid .edgeLabel {
+    background-color: rgb(15 23 42) !important;
+    color: rgb(148 163 184) !important;
+  }
+
+  .mermaid .cluster rect {
+    fill: rgb(51 65 85) !important;
+    stroke: rgb(71 85 105) !important;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-iris-400 via-iris-500 to-iris-600 bg-clip-text text-transparent;
+  }
+
+  .glow {
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+  }
+
+  .glow-lg {
+    box-shadow: 0 0 40px rgba(99, 102, 241, 0.4);
+  }
+
+  /* Animated gradient border */
+  .gradient-border {
+    position: relative;
+  }
+
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(45deg, #6366f1, #8b5cf6, #6366f1);
+    background-size: 200% 200%;
+    border-radius: inherit;
+    z-index: -1;
+    animation: gradient-shift 3s ease infinite;
+  }
+
+  @keyframes gradient-shift {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  /* Typing indicator animation */
+  .typing-dot {
+    @apply w-2 h-2 bg-iris-400 rounded-full;
+    animation: typing 1.4s ease-in-out infinite;
+  }
+
+  .typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+
+  @keyframes typing {
+    0%, 60%, 100% {
+      transform: translateY(0);
+      opacity: 0.4;
+    }
+    30% {
+      transform: translateY(-4px);
+      opacity: 1;
+    }
+  }
+}
