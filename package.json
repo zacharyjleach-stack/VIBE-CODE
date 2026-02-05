@@ -1,0 +1,32 @@
+{
+  "name": "iris-aegis-platform",
+  "version": "1.0.0",
+  "description": "Dual-AI Vibe Coding Platform - Iris (Frontend) & Aegis (Backend Orchestrator)",
+  "private": true,
+  "workspaces": [
+    "client/iris",
+    "server/aegis",
+    "shared/protocol"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:iris\" \"npm run dev:aegis\"",
+    "dev:iris": "npm run dev --workspace=client/iris",
+    "dev:aegis": "npm run dev --workspace=server/aegis",
+    "build": "npm run build --workspaces",
+    "build:protocol": "npm run build --workspace=shared/protocol",
+    "build:iris": "npm run build --workspace=client/iris",
+    "build:aegis": "npm run build --workspace=server/aegis",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:build": "docker-compose build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

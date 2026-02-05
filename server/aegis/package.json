@@ -1,0 +1,56 @@
+{
+  "name": "@iris-aegis/aegis",
+  "version": "1.0.0",
+  "description": "Aegis Backend Orchestrator - Headless agent swarm manager for the Vibe Coding Platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon --exec ts-node --esm src/index.ts",
+    "build": "tsc -b",
+    "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@iris-aegis/protocol": "file:../../shared/protocol",
+    "bullmq": "^5.1.0",
+    "cors": "^2.8.5",
+    "dockerode": "^4.0.2",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.3.2",
+    "pino": "^8.17.2",
+    "pino-pretty": "^10.3.1",
+    "socket.io": "^4.7.4",
+    "uuid": "^9.0.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/dockerode": "^3.3.23",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.6",
+    "@types/uuid": "^9.0.7",
+    "@typescript-eslint/eslint-plugin": "^6.17.0",
+    "@typescript-eslint/parser": "^6.17.0",
+    "eslint": "^8.56.0",
+    "nodemon": "^3.0.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "vibe-coding",
+    "agent-orchestrator",
+    "swarm-management",
+    "backend"
+  ],
+  "author": "Iris-Aegis Platform",
+  "license": "MIT"
+}
