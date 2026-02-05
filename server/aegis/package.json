@@ -15,7 +15,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@iris-aegis/protocol": "workspace:*",
+    "@iris-aegis/protocol": "file:../../shared/protocol",
     "bullmq": "^5.1.0",
     "cors": "^2.8.5",
     "dockerode": "^4.0.2",

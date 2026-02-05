@@ -14,40 +14,42 @@ export function DeployButton() {
   const [deployError, setDeployError] = useState<string | null>(null);
 
   const {
-    vibeContext,
-    sessionId,
-    setMissionId,
-    setDeploymentStatus,
-    isVibeContextValid
+    userIntent,
+    getVibeContext,
+    setHandoffStatus,
+    setCurrentJobId,
+    setHandoffError,
+    confidenceScore,
   } = useVibeStore();
+
+  // Check if vibe context is valid (has user intent)
+  const isVibeContextValid = () => userIntent.length > 10;
 
   const handleDeploy = async () => {
     if (!isVibeContextValid()) {
-      setDeployError('Please provide a valid intent before deploying');
+      setDeployError('Please provide more details about what you want to build');
       return;
     }
 
     setIsDeploying(true);
     setDeployError(null);
-    setDeploymentStatus('deploying');
+    setHandoffStatus('pending');
 
     try {
-      const response = await aegisApi.handoff({
-        sessionId: sessionId!,
-        vibeContext,
-        priority: 'medium',
-      });
+      const vibeContext = getVibeContext();
+      const response = await aegisApi.handoff(vibeContext);
 
-      if (response.success && response.missionId) {
-        setMissionId(response.missionId);
-        setDeploymentStatus('active');
+      if (response.success && response.data) {
+        setCurrentJobId((response.data as any).jobId || null);
+        setHandoffStatus('in_progress');
       } else {
-        throw new Error(response.error || 'Deployment failed');
+        throw new Error(response.error?.message || 'Deployment failed');
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to deploy';
       setDeployError(message);
-      setDeploymentStatus('error');
+      setHandoffError(message);
+      setHandoffStatus('failed');
     } finally {
       setIsDeploying(false);
     }

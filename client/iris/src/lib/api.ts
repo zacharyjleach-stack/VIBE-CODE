@@ -265,4 +265,7 @@ export const api = {
   chat,
 };
 
+// Alias for backward compatibility
+export const aegisApi = api;
+
 export default api;

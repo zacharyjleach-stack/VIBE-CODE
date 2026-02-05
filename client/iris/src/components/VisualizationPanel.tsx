@@ -34,7 +34,7 @@ type ViewMode = 'architecture' | 'agents' | 'preview';
  */
 export function VisualizationPanel() {
   const [viewMode, setViewMode] = useState<ViewMode>('agents');
-  const { agentStatuses, missionId, deploymentStatus } = useVibeStore();
+  const { agents, currentJobId, handoffStatus } = useVibeStore();
   const { swarmState } = useAegisConnection();
 
   return (
@@ -65,9 +65,9 @@ export function VisualizationPanel() {
       <div className="flex-1 overflow-auto p-4">
         {viewMode === 'agents' && (
           <AgentSwarmView
-            agents={swarmState?.agents || agentStatuses}
-            missionId={missionId}
-            status={deploymentStatus}
+            agents={swarmState?.agents || agents}
+            missionId={currentJobId}
+            status={handoffStatus}
           />
         )}
         {viewMode === 'architecture' && <ArchitectureView />}
