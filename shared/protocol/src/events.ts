@@ -3,9 +3,9 @@
  * Defines the WebSocket event system for Iris-Aegis communication
  */
 
-import type { AgentInfo, AgentStatus, SwarmState } from './agent-status';
-import type { MissionBrief, MissionStatus } from './mission-brief';
-import type { ExecutionPhase } from './api-contracts';
+import type { AgentInfo, AgentStatus, SwarmState } from './agent-status.js';
+import type { MissionBrief, MissionStatus } from './mission-brief.js';
+import type { ExecutionPhase } from './api-contracts.js';
 
 /**
  * Base interface for all swarm events

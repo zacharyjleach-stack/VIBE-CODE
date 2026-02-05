@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "dev": "nodemon --exec ts-node --esm src/index.ts",
+    "dev": "nodemon",
     "build": "tsc -b",
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",
@@ -39,6 +39,7 @@
     "eslint": "^8.56.0",
     "nodemon": "^3.0.2",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.3.3",
     "vitest": "^1.1.3"
   },

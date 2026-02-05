@@ -3,8 +3,8 @@
  * Defines the request/response shapes for Iris-Aegis communication
  */
 
-import type { MissionBrief, Priority, VibeContext } from './mission-brief';
-import type { SwarmState, SwarmStats } from './agent-status';
+import type { MissionBrief, Priority, VibeContext } from './mission-brief.js';
+import type { SwarmState, SwarmStats } from './agent-status.js';
 
 /**
  * Request payload sent from Iris to Aegis to initiate a mission

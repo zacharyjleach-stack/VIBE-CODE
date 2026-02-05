@@ -15,7 +15,7 @@ export {
   // Enums
   MissionStatus,
   Priority,
-} from './mission-brief';
+} from './mission-brief.js';
 
 export type {
   // Interfaces
@@ -25,7 +25,7 @@ export type {
   MissionBrief,
   // Types
   CreateMissionBriefInput,
-} from './mission-brief';
+} from './mission-brief.js';
 
 // ============================================================================
 // Agent Status Types
@@ -37,7 +37,7 @@ export {
   AgentRole,
   // Constants
   MAX_SWARM_SIZE,
-} from './agent-status';
+} from './agent-status.js';
 
 export type {
   // Interfaces
@@ -47,7 +47,7 @@ export type {
   SwarmStats,
   // Types
   AgentId,
-} from './agent-status';
+} from './agent-status.js';
 
 // ============================================================================
 // API Contract Types
@@ -57,7 +57,7 @@ export {
   // Enums
   HandoffErrorCode,
   ExecutionPhase,
-} from './api-contracts';
+} from './api-contracts.js';
 
 export type {
   // Request/Response interfaces
@@ -74,7 +74,7 @@ export type {
   ResumeRequest,
   ResumeResponse,
   HealthCheckResponse,
-} from './api-contracts';
+} from './api-contracts.js';
 
 // ============================================================================
 // Event Types
@@ -86,7 +86,7 @@ export {
   // Type guards
   isAgentEvent,
   isMissionEvent,
-} from './events';
+} from './events.js';
 
 export type {
   // Base interface
@@ -115,15 +115,15 @@ export type {
   SwarmEventMap,
   SwarmEventHandler,
   SwarmEventSubscriber,
-} from './events';
+} from './events.js';
 
 // ============================================================================
 // Re-export everything as namespaces for convenience
 // ============================================================================
 
-import * as MissionTypes from './mission-brief';
-import * as AgentTypes from './agent-status';
-import * as ApiTypes from './api-contracts';
-import * as EventTypes from './events';
+import * as MissionTypes from './mission-brief.js';
+import * as AgentTypes from './agent-status.js';
+import * as ApiTypes from './api-contracts.js';
+import * as EventTypes from './events.js';
 
 export { MissionTypes, AgentTypes, ApiTypes, EventTypes };

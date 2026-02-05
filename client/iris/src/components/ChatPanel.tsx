@@ -26,6 +26,7 @@ export function ChatPanel() {
   const confidenceScore = useVibeStore((state) => state.confidenceScore);
   const addMessage = useVibeStore((state) => state.addMessage);
   const setIsTyping = useVibeStore((state) => state.setIsTyping);
+  const updateAgentStatus = useVibeStore((state) => state.updateAgentStatus);
   const setUserIntent = useVibeStore((state) => state.setUserIntent);
   const appendToIntent = useVibeStore((state) => state.appendToIntent);
   const updateTechStack = useVibeStore((state) => state.updateTechStack);
@@ -168,10 +169,54 @@ export function ChatPanel() {
     ]
   );
 
+  // Parse swarm commands like "1 build a login page" or "@3 fix the navbar"
+  const parseSwarmCommand = (message: string): { agentId: number; task: string } | null => {
+    // Match patterns: "1 do something", "@1 do something", "#1 do something", "agent 1 do something"
+    const match = message.match(/^(?:@|#|agent\s*)?(\d{1,2})\s+(.+)$/i);
+    if (match) {
+      const agentId = parseInt(match[1], 10);
+      if (agentId >= 1 && agentId <= 16) {
+        return { agentId, task: match[2] };
+      }
+    }
+    return null;
+  };
+
+  // Dispatch a command to a specific swarm agent
+  const dispatchSwarmCommand = useCallback(async (agentId: number, task: string) => {
+    // Update agent status locally
+    updateAgentStatus(agentId, 'working', task, 10);
+
+    // Send to Aegis backend
+    try {
+      const response = await fetch('/api/aegis/agents/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId, task }),
+      });
+      const data = await response.json();
+
+      addMessage({
+        role: 'system',
+        content: `Agent #${agentId} assigned: "${task}"`,
+      });
+
+      return data;
+    } catch {
+      addMessage({
+        role: 'system',
+        content: `Agent #${agentId} assigned locally: "${task}" (Aegis offline)`,
+      });
+    }
+  }, [addMessage, updateAgentStatus]);
+
   // Send message to AI
   const handleSendMessage = useCallback(async () => {
     const trimmedInput = inputValue.trim();
     if (!trimmedInput || isLoading) return;
+
+    // Check for swarm command first
+    const swarmCommand = parseSwarmCommand(trimmedInput);
 
     // Add user message
     addMessage({
@@ -179,10 +224,31 @@ export function ChatPanel() {
       content: trimmedInput,
     });
 
-    // Capture vibe from message
+    setInputValue('');
+
+    if (swarmCommand) {
+      // Route to specific agent
+      await dispatchSwarmCommand(swarmCommand.agentId, swarmCommand.task);
+      return;
+    }
+
+    // Check for multi-agent commands like "1-4 build the frontend"
+    const rangeMatch = trimmedInput.match(/^(\d{1,2})-(\d{1,2})\s+(.+)$/);
+    if (rangeMatch) {
+      const start = parseInt(rangeMatch[1], 10);
+      const end = parseInt(rangeMatch[2], 10);
+      const task = rangeMatch[3];
+      if (start >= 1 && end <= 16 && start <= end) {
+        for (let i = start; i <= end; i++) {
+          await dispatchSwarmCommand(i, task);
+        }
+        return;
+      }
+    }
+
+    // Normal chat flow
     captureVibe(trimmedInput);
 
-    setInputValue('');
     setIsLoading(true);
     setIsTyping(true);
 
@@ -239,6 +305,7 @@ export function ChatPanel() {
     getVibeContext,
     updateTechStack,
     updateStylePreferences,
+    dispatchSwarmCommand,
   ]);
 
   // Generate local fallback response
@@ -420,7 +487,7 @@ export function ChatPanel() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Describe your app idea... (Shift+Enter for new line)"
+              placeholder="Chat or command agents: '1 build a login page' or '1-4 scaffold the API'"
               className="input-field pr-12 resize-none min-h-[48px] max-h-[150px]"
               rows={1}
               disabled={isLoading}

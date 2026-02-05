@@ -15,6 +15,7 @@ import type {
 // ==================== Configuration ====================
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_AEGIS_API_URL || '/api/aegis';
+const CHAT_API_URL = '/api/chat'; // Local Iris chat endpoint (calls LLM)
 const API_TIMEOUT = 30000; // 30 seconds
 
 // ==================== Fetch Wrapper ====================
@@ -226,7 +227,8 @@ export async function generateDiagram(
 }
 
 /**
- * Chat with AI assistant
+ * Chat with AI assistant (Iris)
+ * Uses local /api/chat endpoint which calls LLM (Anthropic/OpenAI)
  */
 export async function chat(
   sessionId: string,
@@ -239,14 +241,62 @@ export async function chat(
     suggestions?: string[];
   }>
 > {
-  return apiRequest('/chat', {
-    method: 'POST',
-    body: JSON.stringify({
-      sessionId,
-      message,
-      vibeContext,
-    }),
-  });
+  try {
+    const response = await fetchWithTimeout(CHAT_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sessionId,
+        message,
+        vibeContext,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: {
+          code: `HTTP_${response.status}`,
+          message: data.error || `Request failed with status ${response.status}`,
+        },
+      };
+    }
+
+    return {
+      success: true,
+      data,
+    };
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        return {
+          success: false,
+          error: {
+            code: 'TIMEOUT',
+            message: 'Request timed out',
+          },
+        };
+      }
+      return {
+        success: false,
+        error: {
+          code: 'NETWORK_ERROR',
+          message: error.message,
+        },
+      };
+    }
+    return {
+      success: false,
+      error: {
+        code: 'UNKNOWN_ERROR',
+        message: 'An unexpected error occurred',
+      },
+    };
+  }
 }
 
 // ==================== Export API Client Object ====================

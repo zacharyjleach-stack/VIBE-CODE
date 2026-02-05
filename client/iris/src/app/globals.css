@@ -24,7 +24,7 @@
   }
 
   body {
-    @apply bg-dark-900 text-dark-50 antialiased;
+    @apply bg-dark-950 text-dark-100 antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
@@ -148,6 +148,102 @@
   .mermaid .cluster rect {
     fill: rgb(51 65 85) !important;
     stroke: rgb(71 85 105) !important;
+  }
+
+  /* ==================== Bento Box Design System ==================== */
+
+  /* Base bento card */
+  .bento-card {
+    @apply rounded-3xl bg-dark-900/50 backdrop-blur-xl
+           border border-white/10 p-6
+           hover:border-white/20 transition-all duration-300
+           shadow-bento;
+  }
+
+  .bento-card-hover {
+    @apply bento-card hover:scale-[1.02] hover:shadow-bento-hover;
+  }
+
+  /* Bento grid layout */
+  .bento-grid {
+    @apply grid gap-4;
+  }
+
+  /* Card sizes for bento grid */
+  .bento-lg {
+    @apply col-span-2 row-span-2;
+  }
+
+  .bento-md {
+    @apply col-span-1 row-span-2;
+  }
+
+  .bento-wide {
+    @apply col-span-2 row-span-1;
+  }
+
+  .bento-sm {
+    @apply col-span-1 row-span-1;
+  }
+
+  .bento-tall {
+    @apply col-span-1 row-span-3;
+  }
+
+  .bento-full {
+    @apply col-span-full row-span-1;
+  }
+
+  /* Feature cards with gradients */
+  .bento-iris {
+    @apply bento-card bg-gradient-to-br from-purple-900/40 via-dark-900/50 to-pink-900/30
+           border-iris-500/20 hover:border-iris-400/40
+           hover:shadow-glow-iris;
+  }
+
+  .bento-aegis {
+    @apply bento-card bg-gradient-to-br from-cyan-900/40 via-dark-900/50 to-emerald-900/30
+           border-aegis-500/20 hover:border-aegis-400/40
+           hover:shadow-glow-aegis;
+  }
+
+  /* Stats card */
+  .bento-stat {
+    @apply bento-card flex flex-col items-center justify-center text-center;
+  }
+
+  .bento-stat-value {
+    @apply text-4xl font-bold text-dark-100;
+  }
+
+  .bento-stat-label {
+    @apply text-sm text-dark-400 mt-1;
+  }
+
+  /* Agent slot in swarm grid */
+  .agent-slot {
+    @apply aspect-square rounded-2xl p-3 flex flex-col items-center justify-center
+           transition-all duration-300 border border-transparent;
+  }
+
+  .agent-slot-idle {
+    @apply agent-slot bg-dark-800/50 text-dark-500;
+  }
+
+  .agent-slot-coding {
+    @apply agent-slot bg-iris-500/20 border-iris-500/50 text-iris-300;
+  }
+
+  .agent-slot-testing {
+    @apply agent-slot bg-amber-500/20 border-amber-500/50 text-amber-300;
+  }
+
+  .agent-slot-complete {
+    @apply agent-slot bg-emerald-500/20 border-emerald-500/50 text-emerald-300;
+  }
+
+  .agent-slot-error {
+    @apply agent-slot bg-red-500/20 border-red-500/50 text-red-300;
   }
 }
 
