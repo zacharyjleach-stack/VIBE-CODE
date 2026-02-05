@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { QueryProvider } from '@/lib/QueryProvider';
+import { NeuralProvider } from '@/context/NeuralContext';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -24,7 +25,8 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-dark-950 font-sans">
         <QueryProvider>
-          <div className="flex flex-col min-h-screen">
+          <NeuralProvider>
+            <div className="flex flex-col min-h-screen">
             {/* Header */}
             <header className="flex-shrink-0 h-14 px-4 flex items-center justify-between border-b border-dark-800 bg-dark-900/80 backdrop-blur-xl z-50">
               <div className="flex items-center gap-3">
@@ -61,6 +63,7 @@ export default function RootLayout({
               {children}
             </main>
           </div>
+          </NeuralProvider>
         </QueryProvider>
       </body>
     </html>
