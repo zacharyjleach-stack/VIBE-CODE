@@ -1,0 +1,24 @@
+{
+  "name": "@aegis/hud",
+  "version": "1.0.0",
+  "description": "Aegis HUD - Desktop overlay for agent monitoring",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "concurrently \"vite\" \"electron .\"",
+    "build": "vite build && tsc -p tsconfig.main.json",
+    "start": "electron dist/main.js"
+  },
+  "dependencies": {
+    "electron": "^28.0.0",
+    "socket.io-client": "^4.7.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8",
+    "vite-plugin-electron": "^0.28.0"
+  }
+}

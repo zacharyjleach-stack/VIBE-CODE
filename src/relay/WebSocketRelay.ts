@@ -1,6 +1,6 @@
 /**
  * WebSocketRelay - Local WebSocket server for real-time agent sync
- * All agents can subscribe and receive instant context updates
+ * Broadcasts to HUD, Nexus, and all connected agents simultaneously
  */
 
 import { WebSocketServer, WebSocket } from 'ws';
@@ -8,50 +8,55 @@ import type { RelayMessage, AgentType } from '../types/index.js';
 
 export class WebSocketRelay {
   private wss: WebSocketServer;
-  private clients: Map<string, WebSocket> = new Map();
+  private clients: Map<string, { ws: WebSocket; agentType?: string }> = new Map();
   private port: number;
+  private messageHistory: RelayMessage[] = [];
+  private readonly MAX_HISTORY = 100;
 
   constructor(port: number = 7734) {
     this.port = port;
     this.wss = new WebSocketServer({ port });
     this.setupHandlers();
-    console.log(`⚡ Aegis Relay listening on ws://localhost:${port}`);
+    console.log(`⚡ Aegis Relay on ws://localhost:${port}`);
+    console.log(`   Nexus: http://localhost:3737`);
   }
 
   private setupHandlers(): void {
     this.wss.on('connection', (ws, req) => {
-      const clientId = req.headers['x-agent-id'] as string || `client_${Date.now()}`;
-      this.clients.set(clientId, ws);
-      console.log(`  → Agent connected: ${clientId}`);
+      const clientId = (req.headers['x-agent-id'] as string) || `client_${Date.now()}`;
+      const agentType = req.headers['x-agent-type'] as string;
+      this.clients.set(clientId, { ws, agentType });
+      console.log(`  → Connected: ${clientId}${agentType ? ` (${agentType})` : ''}`);
 
-      ws.send(JSON.stringify({
-        type: 'state_update',
-        agent: 'aegis' as AgentType,
-        payload: { message: 'Connected to Aegis Relay' },
-        timestamp: new Date().toISOString(),
-      } satisfies RelayMessage));
+      // Replay recent history so HUD/Nexus catch up instantly
+      for (const msg of this.messageHistory.slice(-20)) {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify(msg));
+        }
+      }
 
       ws.on('message', (data) => {
         try {
           const msg = JSON.parse(data.toString()) as RelayMessage;
           this.broadcast(msg, clientId);
-        } catch {
-          // ignore malformed messages
-        }
+        } catch { /* ignore */ }
       });
 
       ws.on('close', () => {
         this.clients.delete(clientId);
-        console.log(`  ← Agent disconnected: ${clientId}`);
+        console.log(`  ← Disconnected: ${clientId}`);
       });
     });
   }
 
   broadcast(message: RelayMessage, excludeClientId?: string): void {
+    this.messageHistory.push(message);
+    if (this.messageHistory.length > this.MAX_HISTORY) this.messageHistory.shift();
+
     const payload = JSON.stringify(message);
     for (const [id, client] of this.clients.entries()) {
-      if (id !== excludeClientId && client.readyState === WebSocket.OPEN) {
-        client.send(payload);
+      if (id !== excludeClientId && client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(payload);
       }
     }
   }
@@ -59,8 +64,35 @@ export class WebSocketRelay {
   broadcastStateUpdate(state: unknown): void {
     this.broadcast({
       type: 'state_update',
-      agent: 'unknown',
-      payload: state,
+      agent: 'aegis' as AgentType,
+      payload: { state },
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  broadcastFileChange(file: string, agent: AgentType, summary: string): void {
+    this.broadcast({
+      type: 'agent_sync',
+      agent,
+      payload: { file, summary } as unknown as Record<string, unknown>,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  broadcastVibeCheck(vibeScore: number, screenshotPath: string, summary: string): void {
+    this.broadcast({
+      type: 'vibe_check' as RelayMessage['type'],
+      agent: 'aegis' as AgentType,
+      payload: { vibeScore, screenshotPath, summary } as unknown as Record<string, unknown>,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  broadcastTokenUsage(total: number, cost: number): void {
+    this.broadcast({
+      type: 'state_update',
+      agent: 'aegis' as AgentType,
+      payload: { tokenUsage: { total, cost } } as unknown as Record<string, unknown>,
       timestamp: new Date().toISOString(),
     });
   }
