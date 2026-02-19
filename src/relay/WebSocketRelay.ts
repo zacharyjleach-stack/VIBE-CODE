@@ -97,6 +97,24 @@ export class WebSocketRelay {
     });
   }
 
+  broadcastTokenBalance(balance: number, plan: string): void {
+    this.broadcast({
+      type: 'token_balance' as RelayMessage['type'],
+      agent: 'aegis' as AgentType,
+      payload: { balance, plan } as unknown as Record<string, unknown>,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  broadcastTokenExpired(upgradeUrl: string): void {
+    this.broadcast({
+      type: 'token_expired' as RelayMessage['type'],
+      agent: 'aegis' as AgentType,
+      payload: { upgradeUrl } as unknown as Record<string, unknown>,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   getConnectedCount(): number {
     return this.clients.size;
   }

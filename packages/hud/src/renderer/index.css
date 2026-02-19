@@ -159,3 +159,102 @@ body {
 .relay-status.online { color: #00FF88; }
 .relay-status.offline { color: #FF3B30; }
 .relay-port { font-size: 9px; color: var(--text-dim); }
+
+/* ── Trial Expired Overlay ── */
+.trial-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(10, 10, 12, 0.92);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.trial-box {
+  background: rgba(255, 59, 48, 0.08);
+  border: 1px solid rgba(255, 59, 48, 0.4);
+  border-radius: 12px;
+  padding: 24px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  box-shadow: 0 0 40px rgba(255, 59, 48, 0.15);
+}
+
+.trial-icon {
+  font-size: 28px;
+  color: #FF3B30;
+  animation: pulse-red 2s ease-in-out infinite;
+}
+
+@keyframes pulse-red {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.95); }
+}
+
+.trial-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: #FF3B30;
+}
+
+.trial-body {
+  font-size: 10px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.trial-balance {
+  font-size: 11px;
+  color: #FF3B30;
+  font-weight: 700;
+}
+
+.trial-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.trial-btn-primary {
+  background: #7C6AFF;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.trial-btn-primary:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+.trial-btn-dismiss {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 16px;
+  font-family: var(--font);
+  font-size: 10px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.trial-btn-dismiss:hover {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.2);
+}

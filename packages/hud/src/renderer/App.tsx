@@ -43,6 +43,8 @@ export default function App() {
   const [objective, setObjective] = useState('Waiting for Aegis...');
   const [tokenUsage, setTokenUsage] = useState({ total: 0, cost: 0 });
   const [connected, setConnected] = useState(false);
+  const [trialExpired, setTrialExpired] = useState(false);
+  const [tokenBalance, setTokenBalance] = useState<number | null>(null);
   const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -116,10 +118,57 @@ export default function App() {
     if (event.payload?.tokenUsage) {
       setTokenUsage(event.payload.tokenUsage as { total: number; cost: number });
     }
+
+    // Token Sentry: detect expired trial via relay events
+    if (event.type === 'token_expired') {
+      setTrialExpired(true);
+    }
+
+    if (event.type === 'token_balance') {
+      const bal = (event.payload as unknown as { balance?: number })?.balance;
+      if (typeof bal === 'number') {
+        setTokenBalance(bal);
+        if (bal <= 0) setTrialExpired(true);
+      }
+    }
   }
 
   return (
     <div className="hud-root">
+      {/* Trial Expired Overlay */}
+      {trialExpired && (
+        <div className="trial-overlay">
+          <div className="trial-box">
+            <div className="trial-icon">⬡</div>
+            <div className="trial-title">TRIAL EXPIRED</div>
+            <div className="trial-body">
+              You've used all your free tokens.
+              <br />AI actions are now paused.
+            </div>
+            {tokenBalance !== null && tokenBalance <= 0 && (
+              <div className="trial-balance">0 tokens remaining</div>
+            )}
+            <div className="trial-actions">
+              <button
+                className="trial-btn-primary"
+                onClick={() => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (window as any).electronAPI?.openExternal('https://aegissolutions.co.uk/billing');
+                }}
+              >
+                Upgrade Now →
+              </button>
+              <button
+                className="trial-btn-dismiss"
+                onClick={() => setTrialExpired(false)}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="hud-header">
         <div className="hud-logo">
