@@ -184,3 +184,7 @@ storybook-static/
 *.bak
 *.backup
 *.orig
+
+# Aegis
+.aegis/
+AEGIS_STATE.json
