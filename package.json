@@ -9,9 +9,12 @@
   "scripts": {
     "dev": "npm run dev --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
+    "web": "npm run dev --workspace=@aegis/web",
     "hud": "npm run dev --workspace=packages/hud",
     "nexus": "npm run dev --workspace=packages/nexus",
-    "cli": "npm run dev --workspace=packages/cli",
-    "report": "npm run dev --workspace=packages/report"
+    "report": "npm run dev --workspace=@aegis/report",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
   }
 }

@@ -1,0 +1,33 @@
+{
+  "name": "@aegis/web",
+  "version": "1.0.0",
+  "description": "Aegis Web - Marketing, Dashboard & Token Sentry",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^4.29.0",
+    "@prisma/client": "^5.8.0",
+    "@stripe/stripe-js": "^2.4.0",
+    "framer-motion": "^10.18.0",
+    "lucide-react": "^0.303.0",
+    "next": "14.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "stripe": "^14.14.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "autoprefixer": "^10.4.17",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3"
+  }
+}

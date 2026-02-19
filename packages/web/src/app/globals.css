@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0A0A0C;
+  --surface: rgba(255, 255, 255, 0.04);
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #E8E8F0;
+  --text-dim: rgba(232, 232, 240, 0.5);
+  --accent: #7C6AFF;
+  --accent-cyan: #00D4FF;
+  --accent-green: #00FF88;
+  --accent-orange: #FF6B35;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+}
+
+.glow-purple { box-shadow: 0 0 60px rgba(124, 106, 255, 0.3); }
+.glow-cyan { box-shadow: 0 0 60px rgba(0, 212, 255, 0.3); }
+.glow-green { box-shadow: 0 0 60px rgba(0, 255, 136, 0.3); }
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+.animate-float { animation: float 6s ease-in-out infinite; }
