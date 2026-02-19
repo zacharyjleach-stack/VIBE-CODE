@@ -12,12 +12,22 @@ export const metadata: Metadata = {
   },
 };
 
+// Make Clerk optional for development without keys
+const hasClerkKey = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+function AuthWrapper({ children }: { children: React.ReactNode }) {
+  if (hasClerkKey) {
+    return <ClerkProvider>{children}</ClerkProvider>;
+  }
+  return <>{children}</>;
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
+    <AuthWrapper>
       <html lang="en">
         <body>{children}</body>
       </html>
-    </ClerkProvider>
+    </AuthWrapper>
   );
 }
