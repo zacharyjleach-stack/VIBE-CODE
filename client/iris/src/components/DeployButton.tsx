@@ -1,33 +1,26 @@
 'use client';
 
 import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { useVibeStore } from '@/store/vibeStore';
 import { aegisApi } from '@/lib/api';
 
 /**
  * DeployButton Component
  * Triggers the handoff from Iris to Aegis
- * Sends the vibe_context to the Aegis backend to initialize the agent swarm
  */
 export function DeployButton() {
   const [isDeploying, setIsDeploying] = useState(false);
   const [deployError, setDeployError] = useState<string | null>(null);
 
-  const {
-    userIntent,
-    getVibeContext,
-    setHandoffStatus,
-    setCurrentJobId,
-    setHandoffError,
-    confidenceScore,
-  } = useVibeStore();
+  const { userIntent, getVibeContext, setHandoffStatus, setCurrentJobId, setHandoffError, confidenceScore } =
+    useVibeStore();
 
-  // Check if vibe context is valid (has user intent)
   const isVibeContextValid = () => userIntent.length > 10;
 
   const handleDeploy = async () => {
     if (!isVibeContextValid()) {
-      setDeployError('Please provide more details about what you want to build');
+      setDeployError('Please describe what you want to build first');
       return;
     }
 
@@ -58,72 +51,38 @@ export function DeployButton() {
   const isDisabled = isDeploying || !isVibeContextValid();
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       <button
         onClick={handleDeploy}
         disabled={isDisabled}
-        className={`
-          relative flex items-center justify-center gap-2 px-6 py-3
-          rounded-lg font-semibold text-sm transition-all duration-200
-          ${isDisabled
-            ? 'bg-dark-700 text-dark-400 cursor-not-allowed'
-            : 'bg-gradient-to-r from-iris-500 to-aegis-500 text-white hover:from-iris-400 hover:to-aegis-400 hover:shadow-lg hover:shadow-iris-500/25'
-          }
-        `}
+        className={`btn w-full justify-center gap-2 ${isDisabled ? 'opacity-40 cursor-not-allowed' : 'btn-primary'}`}
       >
         {isDeploying ? (
           <>
-            <LoadingSpinner />
-            <span>Deploying to Aegis...</span>
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <span>Deploying to Aegis…</span>
           </>
         ) : (
           <>
             <RocketIcon />
             <span>Deploy to Aegis</span>
+            {confidenceScore > 0 && (
+              <span className="ml-auto text-[10px] opacity-60">{Math.round(confidenceScore * 100)}%</span>
+            )}
           </>
         )}
       </button>
 
       {deployError && (
-        <p className="text-xs text-red-400 text-center">{deployError}</p>
+        <p className="text-[11px] text-red-400 text-center">{deployError}</p>
       )}
     </div>
   );
 }
 
-function LoadingSpinner() {
-  return (
-    <svg
-      className="animate-spin h-4 w-4"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-      />
-    </svg>
-  );
-}
-
 function RocketIcon() {
   return (
-    <svg
-      className="h-4 w-4"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-    >
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"

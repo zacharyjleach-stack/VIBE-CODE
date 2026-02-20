@@ -17,14 +17,14 @@ export function SplitPane() {
       <Allotment defaultSizes={[45, 55]}>
         {/* Left Pane: Chat Interface */}
         <Allotment.Pane minSize={350} preferredSize="45%">
-          <div className="h-full bg-dark-900 border-r border-dark-800">
+          <div className="h-full bg-[#111113] border-r border-[#27272a]">
             <ChatPanel />
           </div>
         </Allotment.Pane>
 
         {/* Right Pane: Visualization */}
         <Allotment.Pane minSize={400} preferredSize="55%">
-          <div className="h-full bg-dark-950">
+          <div className="h-full bg-[#09090b]">
             <VisualizationPanel />
           </div>
         </Allotment.Pane>

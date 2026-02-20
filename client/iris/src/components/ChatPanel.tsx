@@ -1,24 +1,42 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, KeyboardEvent } from 'react';
-import { Send, Sparkles, Loader2, Trash2, RotateCcw } from 'lucide-react';
+import { Send, Sparkles, Loader2, RotateCcw, Zap } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useVibeStore } from '@/store/vibeStore';
 import { api } from '@/lib/api';
 import { DeployButton } from './DeployButton';
-import { clsx } from 'clsx';
 
-/**
- * ChatPanel Component
- * Chat interface for capturing user intent and vibe
- * Includes message history, input field, and vibe capture logic
- */
+const SUGGESTIONS = [
+  'A SaaS dashboard with auth and billing',
+  'A REST API with PostgreSQL and Docker',
+  'A real-time chat app with WebSockets',
+];
+
+function renderContent(text: string) {
+  const boldRegex = /\*\*(.*?)\*\*/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match;
+  let key = 0;
+
+  while ((match = boldRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    parts.push(<strong key={key++} className="font-semibold text-[#fafafa]">{match[1]}</strong>);
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return parts;
+}
+
 export function ChatPanel() {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Store state and actions
   const messages = useVibeStore((state) => state.messages);
   const isTyping = useVibeStore((state) => state.isTyping);
   const sessionId = useVibeStore((state) => state.sessionId);
@@ -37,12 +55,10 @@ export function ChatPanel() {
   const clearMessages = useVibeStore((state) => state.clearMessages);
   const initializeSession = useVibeStore((state) => state.initializeSession);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -50,13 +66,11 @@ export function ChatPanel() {
     }
   }, [inputValue]);
 
-  // Vibe capture logic - parse user message for intent signals
   const captureVibe = useCallback(
     (message: string) => {
       const lowerMessage = message.toLowerCase();
       let confidenceBoost = 0;
 
-      // Capture user intent
       if (!userIntent && message.length > 20) {
         setUserIntent(message);
         confidenceBoost += 0.2;
@@ -65,129 +79,62 @@ export function ChatPanel() {
         confidenceBoost += 0.1;
       }
 
-      // Detect frontend frameworks
       const frontendPatterns: Record<string, string> = {
-        react: 'React',
-        'next.js': 'Next.js',
-        nextjs: 'Next.js',
-        vue: 'Vue.js',
-        angular: 'Angular',
-        svelte: 'Svelte',
+        react: 'React', 'next.js': 'Next.js', nextjs: 'Next.js',
+        vue: 'Vue.js', angular: 'Angular', svelte: 'Svelte',
       };
-
       for (const [pattern, name] of Object.entries(frontendPatterns)) {
-        if (lowerMessage.includes(pattern)) {
-          updateTechStack({ frontend: { name } });
-          confidenceBoost += 0.1;
-          break;
-        }
+        if (lowerMessage.includes(pattern)) { updateTechStack({ frontend: { name } }); confidenceBoost += 0.1; break; }
       }
 
-      // Detect backend frameworks
       const backendPatterns: Record<string, string> = {
-        node: 'Node.js',
-        express: 'Express',
-        python: 'Python',
-        django: 'Django',
-        fastapi: 'FastAPI',
-        'go lang': 'Go',
-        golang: 'Go',
-        rust: 'Rust',
+        node: 'Node.js', express: 'Express', python: 'Python',
+        django: 'Django', fastapi: 'FastAPI', 'go lang': 'Go', golang: 'Go', rust: 'Rust',
       };
-
       for (const [pattern, name] of Object.entries(backendPatterns)) {
-        if (lowerMessage.includes(pattern)) {
-          updateTechStack({ backend: { name } });
-          confidenceBoost += 0.1;
-          break;
-        }
+        if (lowerMessage.includes(pattern)) { updateTechStack({ backend: { name } }); confidenceBoost += 0.1; break; }
       }
 
-      // Detect databases
       const dbPatterns: Record<string, { type: 'postgresql' | 'mysql' | 'mongodb' | 'sqlite' | 'redis'; name: string }> = {
-        postgres: { type: 'postgresql', name: 'PostgreSQL' },
-        postgresql: { type: 'postgresql', name: 'PostgreSQL' },
-        mysql: { type: 'mysql', name: 'MySQL' },
-        mongodb: { type: 'mongodb', name: 'MongoDB' },
-        mongo: { type: 'mongodb', name: 'MongoDB' },
-        sqlite: { type: 'sqlite', name: 'SQLite' },
+        postgres: { type: 'postgresql', name: 'PostgreSQL' }, postgresql: { type: 'postgresql', name: 'PostgreSQL' },
+        mysql: { type: 'mysql', name: 'MySQL' }, mongodb: { type: 'mongodb', name: 'MongoDB' },
+        mongo: { type: 'mongodb', name: 'MongoDB' }, sqlite: { type: 'sqlite', name: 'SQLite' },
         redis: { type: 'redis', name: 'Redis' },
       };
-
       for (const [pattern, db] of Object.entries(dbPatterns)) {
-        if (lowerMessage.includes(pattern)) {
-          updateTechStack({ database: db });
-          confidenceBoost += 0.1;
-          break;
-        }
+        if (lowerMessage.includes(pattern)) { updateTechStack({ database: db }); confidenceBoost += 0.1; break; }
       }
 
-      // Detect constraints
       const constraintPatterns = [
         { match: /must (be|have|support)/i, type: 'must-have' as const },
         { match: /should (be|have|support)/i, type: 'nice-to-have' as const },
         { match: /don't|avoid|no\s/i, type: 'avoid' as const },
       ];
-
       for (const { match, type } of constraintPatterns) {
-        if (match.test(message)) {
-          addConstraint({
-            type,
-            description: message,
-            category: 'other',
-          });
-          confidenceBoost += 0.05;
-        }
+        if (match.test(message)) { addConstraint({ type, description: message, category: 'other' }); confidenceBoost += 0.05; }
       }
 
-      // Detect style preferences
-      if (lowerMessage.includes('dark') || lowerMessage.includes('dark mode')) {
-        updateStylePreferences({ colorScheme: 'dark' });
-      }
-      if (lowerMessage.includes('light') || lowerMessage.includes('light mode')) {
-        updateStylePreferences({ colorScheme: 'light' });
-      }
-      if (lowerMessage.includes('minimal')) {
-        updateStylePreferences({ animations: 'minimal' });
-      }
-      if (lowerMessage.includes('animated') || lowerMessage.includes('fancy')) {
-        updateStylePreferences({ animations: 'expressive' });
-      }
+      if (lowerMessage.includes('dark') || lowerMessage.includes('dark mode')) updateStylePreferences({ colorScheme: 'dark' });
+      if (lowerMessage.includes('light') || lowerMessage.includes('light mode')) updateStylePreferences({ colorScheme: 'light' });
+      if (lowerMessage.includes('minimal')) updateStylePreferences({ animations: 'minimal' });
+      if (lowerMessage.includes('animated') || lowerMessage.includes('fancy')) updateStylePreferences({ animations: 'expressive' });
 
-      // Update confidence score
       updateConfidence(confidenceScore + confidenceBoost);
     },
-    [
-      userIntent,
-      confidenceScore,
-      setUserIntent,
-      appendToIntent,
-      updateTechStack,
-      addConstraint,
-      updateStylePreferences,
-      updateConfidence,
-    ]
+    [userIntent, confidenceScore, setUserIntent, appendToIntent, updateTechStack, addConstraint, updateStylePreferences, updateConfidence]
   );
 
-  // Parse swarm commands like "1 build a login page" or "@3 fix the navbar"
   const parseSwarmCommand = (message: string): { agentId: number; task: string } | null => {
-    // Match patterns: "1 do something", "@1 do something", "#1 do something", "agent 1 do something"
     const match = message.match(/^(?:@|#|agent\s*)?(\d{1,2})\s+(.+)$/i);
     if (match) {
       const agentId = parseInt(match[1], 10);
-      if (agentId >= 1 && agentId <= 16) {
-        return { agentId, task: match[2] };
-      }
+      if (agentId >= 1 && agentId <= 16) return { agentId, task: match[2] };
     }
     return null;
   };
 
-  // Dispatch a command to a specific swarm agent
   const dispatchSwarmCommand = useCallback(async (agentId: number, task: string) => {
-    // Update agent status locally
     updateAgentStatus(agentId, 'working', task, 10);
-
-    // Send to Aegis backend
     try {
       const response = await fetch('/api/aegis/agents/command', {
         method: 'POST',
@@ -195,322 +142,239 @@ export function ChatPanel() {
         body: JSON.stringify({ agentId, task }),
       });
       const data = await response.json();
-
-      addMessage({
-        role: 'system',
-        content: `Agent #${agentId} assigned: "${task}"`,
-      });
-
+      addMessage({ role: 'system', content: `Agent #${agentId} assigned: "${task}"` });
       return data;
     } catch {
-      addMessage({
-        role: 'system',
-        content: `Agent #${agentId} assigned locally: "${task}" (Aegis offline)`,
-      });
+      addMessage({ role: 'system', content: `Agent #${agentId} assigned locally: "${task}" (Aegis offline)` });
     }
   }, [addMessage, updateAgentStatus]);
 
-  // Send message to AI
   const handleSendMessage = useCallback(async () => {
     const trimmedInput = inputValue.trim();
     if (!trimmedInput || isLoading) return;
 
-    // Check for swarm command first
     const swarmCommand = parseSwarmCommand(trimmedInput);
-
-    // Add user message
-    addMessage({
-      role: 'user',
-      content: trimmedInput,
-    });
-
+    addMessage({ role: 'user', content: trimmedInput });
     setInputValue('');
 
-    if (swarmCommand) {
-      // Route to specific agent
-      await dispatchSwarmCommand(swarmCommand.agentId, swarmCommand.task);
-      return;
-    }
+    if (swarmCommand) { await dispatchSwarmCommand(swarmCommand.agentId, swarmCommand.task); return; }
 
-    // Check for multi-agent commands like "1-4 build the frontend"
     const rangeMatch = trimmedInput.match(/^(\d{1,2})-(\d{1,2})\s+(.+)$/);
     if (rangeMatch) {
       const start = parseInt(rangeMatch[1], 10);
       const end = parseInt(rangeMatch[2], 10);
       const task = rangeMatch[3];
       if (start >= 1 && end <= 16 && start <= end) {
-        for (let i = start; i <= end; i++) {
-          await dispatchSwarmCommand(i, task);
-        }
+        for (let i = start; i <= end; i++) await dispatchSwarmCommand(i, task);
         return;
       }
     }
 
-    // Normal chat flow
     captureVibe(trimmedInput);
-
     setIsLoading(true);
     setIsTyping(true);
 
     try {
-      // Send to AI for response
       const vibeContext = getVibeContext();
       const response = await api.chat(sessionId || '', trimmedInput, vibeContext);
 
       if (response.success && response.data) {
-        // Apply any vibe updates from AI
         if (response.data.vibeUpdates) {
           const updates = response.data.vibeUpdates;
-          if (updates.techStack) {
-            updateTechStack(updates.techStack);
-          }
-          if (updates.stylePreferences) {
-            updateStylePreferences(updates.stylePreferences);
-          }
+          if (updates.techStack) updateTechStack(updates.techStack);
+          if (updates.stylePreferences) updateStylePreferences(updates.stylePreferences);
         }
-
-        // Add assistant response
         addMessage({
           role: 'assistant',
           content: response.data.response,
-          metadata: {
-            suggestions: response.data.suggestions,
-          },
+          metadata: { suggestions: response.data.suggestions },
         });
       } else {
-        // Fallback response if API fails
-        addMessage({
-          role: 'assistant',
-          content: generateLocalResponse(trimmedInput),
-        });
+        addMessage({ role: 'assistant', content: generateLocalResponse(trimmedInput) });
       }
     } catch (error) {
       console.error('Chat error:', error);
-      // Generate local response on error
-      addMessage({
-        role: 'assistant',
-        content: generateLocalResponse(trimmedInput),
-      });
+      addMessage({ role: 'assistant', content: generateLocalResponse(trimmedInput) });
     } finally {
       setIsLoading(false);
       setIsTyping(false);
     }
-  }, [
-    inputValue,
-    isLoading,
-    sessionId,
-    addMessage,
-    captureVibe,
-    setIsTyping,
-    getVibeContext,
-    updateTechStack,
-    updateStylePreferences,
-    dispatchSwarmCommand,
-  ]);
+  }, [inputValue, isLoading, sessionId, addMessage, captureVibe, setIsTyping, getVibeContext, updateTechStack, updateStylePreferences, dispatchSwarmCommand]);
 
-  // Generate local fallback response
   const generateLocalResponse = (userMessage: string): string => {
     const vibeContext = getVibeContext();
-    const parts: string[] = [];
-
-    parts.push("I've captured that in your project vibe. Here's what I understand so far:");
-
-    if (vibeContext.userIntent) {
-      parts.push(`\n\n**Your Vision:** ${vibeContext.userIntent.slice(0, 200)}${vibeContext.userIntent.length > 200 ? '...' : ''}`);
-    }
-
+    const parts: string[] = ["I've captured that in your project vibe. Here's what I understand so far:"];
+    if (vibeContext.userIntent) parts.push(`\n\n**Your Vision:** ${vibeContext.userIntent.slice(0, 200)}${vibeContext.userIntent.length > 200 ? '...' : ''}`);
     if (vibeContext.techStack.frontend || vibeContext.techStack.backend) {
       parts.push('\n\n**Tech Stack:**');
-      if (vibeContext.techStack.frontend) {
-        parts.push(`- Frontend: ${vibeContext.techStack.frontend.name}`);
-      }
-      if (vibeContext.techStack.backend) {
-        parts.push(`- Backend: ${vibeContext.techStack.backend.name}`);
-      }
-      if (vibeContext.techStack.database) {
-        parts.push(`- Database: ${vibeContext.techStack.database.name}`);
-      }
+      if (vibeContext.techStack.frontend) parts.push(`- Frontend: ${vibeContext.techStack.frontend.name}`);
+      if (vibeContext.techStack.backend) parts.push(`- Backend: ${vibeContext.techStack.backend.name}`);
+      if (vibeContext.techStack.database) parts.push(`- Database: ${vibeContext.techStack.database.name}`);
     }
-
-    if (vibeContext.constraints.length > 0) {
-      parts.push(`\n\n**Constraints:** ${vibeContext.constraints.length} captured`);
-    }
-
-    parts.push('\n\nTell me more about what you want to build, or click the Deploy button when ready!');
-
+    if (vibeContext.constraints.length > 0) parts.push(`\n\n**Constraints:** ${vibeContext.constraints.length} captured`);
+    parts.push('\n\nTell me more about what you want to build, or click Deploy when ready!');
     return parts.join('');
   };
 
-  // Handle keyboard shortcuts
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
   };
 
-  // Clear chat and start fresh
-  const handleClearChat = () => {
-    clearMessages();
-    initializeSession();
-  };
+  const handleClearChat = () => { clearMessages(); initializeSession(); };
+
+  const confidenceColor = confidenceScore >= 0.7 ? '#22c55e' : confidenceScore >= 0.4 ? '#f59e0b' : '#52525b';
 
   return (
     <div className="flex flex-col h-full">
-      {/* Chat Header */}
-      <div className="flex-shrink-0 px-4 py-3 border-b border-dark-800 bg-dark-900/50">
+      {/* Header */}
+      <div className="flex-shrink-0 px-4 py-3 border-b border-[#27272a]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-iris-400" />
-            <h2 className="font-semibold text-dark-100">Vibe Capture</h2>
+            <Sparkles className="w-4 h-4 text-[#8b5cf6]" />
+            <span className="text-sm font-semibold text-[#fafafa]">Vibe Capture</span>
           </div>
           <div className="flex items-center gap-2">
-            {/* Confidence indicator */}
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-dark-800 border border-dark-700">
-              <div
-                className="w-2 h-2 rounded-full"
-                style={{
-                  backgroundColor:
-                    confidenceScore >= 0.7
-                      ? '#10b981'
-                      : confidenceScore >= 0.4
-                      ? '#f59e0b'
-                      : '#6b7280',
-                }}
-              />
-              <span className="text-xs text-dark-400">
-                {Math.round(confidenceScore * 100)}% Ready
-              </span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#27272a] bg-[#18181b]">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: confidenceColor }} />
+              <span className="text-[11px] text-[#71717a]">{Math.round(confidenceScore * 100)}% ready</span>
             </div>
             <button
               onClick={handleClearChat}
-              className="p-2 text-dark-400 hover:text-dark-200 hover:bg-dark-800 rounded-lg transition-colors"
+              className="p-1.5 text-[#52525b] hover:text-[#a1a1aa] hover:bg-[#27272a] rounded-md transition-colors"
               title="Clear chat"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={clsx(
-              'max-w-[85%] p-4 rounded-xl',
-              message.role === 'user' && 'ml-auto message-user',
-              message.role === 'assistant' && 'mr-auto message-assistant',
-              message.role === 'system' && 'mx-auto text-center message-system text-sm'
-            )}
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {messages.length === 0 && (
+          <motion.div
+            className="flex flex-col items-center justify-center h-full gap-6 py-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
           >
-            {/* Message role indicator */}
-            {message.role !== 'system' && (
-              <div className="text-xs text-dark-500 mb-1 font-medium uppercase tracking-wider">
-                {message.role === 'user' ? 'You' : 'Iris'}
+            <div className="text-center">
+              <div className="w-10 h-10 mx-auto mb-3 rounded-xl bg-[#18181b] border border-[#27272a] flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-[#8b5cf6]" />
               </div>
-            )}
-
-            {/* Message content with markdown-like styling */}
-            <div className="prose prose-invert prose-sm max-w-none">
-              {message.content.split('\n').map((line, i) => {
-                // Handle bold text
-                const boldRegex = /\*\*(.*?)\*\*/g;
-                const parts = [];
-                let lastIndex = 0;
-                let match;
-
-                while ((match = boldRegex.exec(line)) !== null) {
-                  if (match.index > lastIndex) {
-                    parts.push(line.slice(lastIndex, match.index));
-                  }
-                  parts.push(
-                    <strong key={match.index} className="font-semibold text-dark-100">
-                      {match[1]}
-                    </strong>
-                  );
-                  lastIndex = match.index + match[0].length;
-                }
-
-                if (lastIndex < line.length) {
-                  parts.push(line.slice(lastIndex));
-                }
-
-                return (
-                  <p key={i} className={clsx('mb-1', line.startsWith('-') && 'pl-4')}>
-                    {parts.length > 0 ? parts : line || <br />}
-                  </p>
-                );
-              })}
+              <p className="text-sm font-medium text-[#a1a1aa]">Describe what you want to build</p>
+              <p className="text-xs text-[#52525b] mt-1">Iris will capture your intent and hand off to Aegis</p>
             </div>
+            <div className="flex flex-col gap-2 w-full max-w-[280px]">
+              {SUGGESTIONS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setInputValue(s)}
+                  className="text-left text-xs px-3 py-2.5 rounded-lg border border-[#27272a] bg-[#18181b] text-[#71717a] hover:text-[#a1a1aa] hover:border-[#3f3f46] transition-all"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
-            {/* Suggestions */}
-            {message.metadata?.suggestions && message.metadata.suggestions.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {message.metadata.suggestions.map((suggestion, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setInputValue(suggestion)}
-                    className="text-xs px-3 py-1.5 bg-dark-700 hover:bg-dark-600 text-dark-300 rounded-full transition-colors"
-                  >
-                    {suggestion}
-                  </button>
+        <AnimatePresence initial={false}>
+          {messages.map((message) => (
+            <motion.div
+              key={message.id}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.18 }}
+              className={
+                message.role === 'user'
+                  ? 'msg-user ml-auto max-w-[85%]'
+                  : message.role === 'assistant'
+                  ? 'msg-assistant mr-auto max-w-[85%]'
+                  : 'msg-system mx-auto text-center text-xs max-w-full'
+              }
+            >
+              {message.role !== 'system' && (
+                <div className="text-[10px] font-medium uppercase tracking-widest mb-1.5 opacity-50">
+                  {message.role === 'user' ? 'You' : 'Iris'}
+                </div>
+              )}
+              <div className="text-sm leading-relaxed">
+                {message.content.split('\n').map((line, i) => (
+                  <p key={i} className={`mb-0.5 ${line.startsWith('-') ? 'pl-3' : ''}`}>
+                    {renderContent(line) || <br />}
+                  </p>
                 ))}
               </div>
-            )}
-          </div>
-        ))}
+              {message.metadata?.suggestions && message.metadata.suggestions.length > 0 && (
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  {message.metadata.suggestions.map((s: string, i: number) => (
+                    <button
+                      key={i}
+                      onClick={() => setInputValue(s)}
+                      className="text-[11px] px-2.5 py-1 rounded-full border border-[#27272a] bg-[#18181b] text-[#71717a] hover:text-[#a1a1aa] transition-colors"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </AnimatePresence>
 
-        {/* Typing indicator */}
         {isTyping && (
-          <div className="flex items-center gap-2 p-4 max-w-[85%] mr-auto message-assistant rounded-xl">
-            <div className="flex items-center gap-1">
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="msg-assistant mr-auto max-w-[85%]"
+          >
+            <div className="text-[10px] font-medium uppercase tracking-widest mb-1.5 opacity-50">Iris</div>
+            <div className="flex items-center gap-1 py-0.5">
               <div className="typing-dot" />
               <div className="typing-dot" />
               <div className="typing-dot" />
             </div>
-            <span className="text-xs text-dark-500">Iris is thinking...</span>
-          </div>
+          </motion.div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="flex-shrink-0 p-4 border-t border-dark-800 bg-dark-900/50">
-        <div className="flex flex-col gap-3">
-          {/* Text Input */}
+      {/* Input */}
+      <div className="flex-shrink-0 p-4 border-t border-[#27272a]">
+        <div className="flex flex-col gap-2.5">
           <div className="relative">
             <textarea
               ref={textareaRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Chat or command agents: '1 build a login page' or '1-4 scaffold the API'"
-              className="input-field pr-12 resize-none min-h-[48px] max-h-[150px]"
+              placeholder="Describe your app, or command agents: '1 build a login page'"
+              className="input pr-10 resize-none min-h-[44px] max-h-[150px] text-sm"
               rows={1}
               disabled={isLoading}
             />
             <button
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || isLoading}
-              className={clsx(
-                'absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-all',
+              className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-all ${
                 inputValue.trim() && !isLoading
-                  ? 'bg-iris-600 hover:bg-iris-500 text-white'
-                  : 'bg-dark-700 text-dark-500 cursor-not-allowed'
-              )}
+                  ? 'bg-[#8b5cf6] hover:bg-[#7c3aed] text-white'
+                  : 'text-[#3f3f46] cursor-not-allowed'
+              }`}
             >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
+              {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             </button>
           </div>
 
-          {/* Deploy Button */}
+          <div className="flex items-center gap-1.5 px-1">
+            <Zap className="w-3 h-3 text-[#3f3f46]" />
+            <span className="text-[10px] text-[#52525b]">Swarm: <code className="text-[#71717a]">1 build auth</code> or <code className="text-[#71717a]">1-4 scaffold API</code></span>
+          </div>
+
           <DeployButton />
         </div>
       </div>
