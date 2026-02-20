@@ -184,3 +184,4 @@ storybook-static/
 *.bak
 *.backup
 *.orig
+.claude/.env.secrets
