@@ -63,15 +63,16 @@ interface UseAegisConnectionReturn {
 
 // ==================== Status Mapping ====================
 
-// Map Aegis AgentStatus enum values to the store's AgentStatus type
+// Map Aegis internal AgentStatusType (lowercase, from src/types/index.ts) to the
+// store's AgentStatus type. The backend emits lowercase values in socket events.
 const AEGIS_TO_STORE_STATUS: Record<string, string> = {
-  Idle: 'idle',
-  Initializing: 'working',
-  Coding: 'working',
-  Testing: 'working',
-  Reviewing: 'working',
-  Complete: 'success',
-  Error: 'error',
+  idle: 'idle',
+  initializing: 'working',
+  coding: 'working',
+  testing: 'working',
+  complete: 'success',
+  error: 'error',
+  terminated: 'idle',
 };
 
 function makeEmptySlots(): SwarmAgentInfo[] {
