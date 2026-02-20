@@ -2,223 +2,170 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, ArrowLeft, Zap, Sparkles, Send, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Eye, ArrowLeft, Zap, Send, Loader2 } from 'lucide-react';
 import { useNeural } from '@/context/NeuralContext';
 import { ChatPanel } from '@/components/ChatPanel';
 import { SplitPane } from '@/components/SplitPane';
 import { useVibeStore } from '@/store/vibeStore';
-import { clsx } from 'clsx';
 
-/**
- * Iris Page - The Iris AI Chat Interface
- *
- * This is the main interface for capturing user intent and project "vibe".
- * Features:
- * - Chat interface with vibe capture logic
- * - Visualization panel for real-time feedback
- * - Handoff functionality to transfer context to Aegis
- */
+const ease = [0.16, 1, 0.3, 1] as const;
+
 export default function IrisPage() {
   const router = useRouter();
   const { initiateHandoff, isHandoffPending } = useNeural();
   const [isHandoffLoading, setIsHandoffLoading] = useState(false);
 
-  // Store state and actions
-  const sessionId = useVibeStore((state) => state.sessionId);
-  const userIntent = useVibeStore((state) => state.userIntent);
-  const confidenceScore = useVibeStore((state) => state.confidenceScore);
-  const techStack = useVibeStore((state) => state.techStack);
-  const constraints = useVibeStore((state) => state.constraints);
-  const initializeSession = useVibeStore((state) => state.initializeSession);
-  const getVibeContext = useVibeStore((state) => state.getVibeContext);
+  const sessionId = useVibeStore((s) => s.sessionId);
+  const userIntent = useVibeStore((s) => s.userIntent);
+  const confidenceScore = useVibeStore((s) => s.confidenceScore);
+  const techStack = useVibeStore((s) => s.techStack);
+  const initializeSession = useVibeStore((s) => s.initializeSession);
+  const getVibeContext = useVibeStore((s) => s.getVibeContext);
 
-  // Initialize session on mount
   useEffect(() => {
-    if (!sessionId) {
-      initializeSession();
-    }
+    if (!sessionId) initializeSession();
   }, [sessionId, initializeSession]);
 
-  // Check if ready to handoff (has meaningful context)
-  const isReadyForHandoff = userIntent.length > 10 && confidenceScore >= 0.3;
+  const isReady = userIntent.length > 10 && confidenceScore >= 0.3;
+  const pct = Math.round(confidenceScore * 100);
 
-  /**
-   * Handle "Build This" - Initiates handoff to Aegis
-   * Gathers current vibe context and triggers the neural handoff
-   */
-  const handleBuildThis = useCallback(() => {
+  const handleBuild = useCallback(() => {
     if (isHandoffLoading || isHandoffPending) return;
-
     setIsHandoffLoading(true);
-
     try {
-      const vibeContext = getVibeContext();
-
-      // Prepare the handoff payload
-      const handoffPayload = {
-        userIntent: vibeContext.userIntent,
+      const ctx = getVibeContext();
+      initiateHandoff({
+        userIntent: ctx.userIntent,
         techStack: {
-          frontend: vibeContext.techStack.frontend?.name,
-          backend: vibeContext.techStack.backend?.name,
-          database: vibeContext.techStack.database?.name,
+          frontend: ctx.techStack.frontend?.name,
+          backend: ctx.techStack.backend?.name,
+          database: ctx.techStack.database?.name,
         },
-        constraints: vibeContext.constraints.map((c) => c.description),
-      };
-
-      // Initiate the handoff to Aegis
-      initiateHandoff(handoffPayload);
-    } catch (error) {
-      console.error('Handoff error:', error);
+        constraints: ctx.constraints.map((c) => c.description),
+      });
+    } catch {
       setIsHandoffLoading(false);
     }
   }, [getVibeContext, initiateHandoff, isHandoffLoading, isHandoffPending]);
 
-  // Navigate back to landing page
-  const handleBack = () => {
-    router.push('/');
-  };
-
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] w-full bg-dark-950">
-      {/* Iris Header with purple/pink gradient theme */}
-      <header className="flex-shrink-0 px-6 py-4 border-b border-iris-900/50 bg-gradient-to-r from-iris-950 via-dark-900 to-purple-950/50">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          {/* Left: Back button and Branding */}
-          <div className="flex items-center gap-4">
+    <div className="flex h-screen flex-col bg-[#09090b]">
+      {/* ── Nav ── */}
+      <header className="flex-shrink-0 border-b border-[#1c1c1f] bg-[#09090b]/95 backdrop-blur-xl">
+        <div className="flex h-14 items-center justify-between px-5">
+          {/* Left */}
+          <div className="flex items-center gap-3">
             <button
-              onClick={handleBack}
-              className="p-2 rounded-lg text-iris-400 hover:text-iris-300 hover:bg-iris-900/30 transition-all duration-200"
-              title="Back to Home"
+              onClick={() => router.push('/')}
+              className="btn-ghost btn p-2"
+              title="Back"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="h-4 w-4" />
             </button>
 
-            <div className="flex items-center gap-3">
-              {/* Eye Icon with purple gradient */}
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-iris-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-iris-600/30 animate-pulse-slow">
-                  <Eye className="w-5 h-5 text-white" />
-                </div>
-                {/* Glow effect */}
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-iris-500 via-purple-500 to-pink-500 blur-lg opacity-30 -z-10" />
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-violet-500/20 bg-violet-500/10">
+                <Eye className="h-4 w-4 text-violet-400" strokeWidth={1.5} />
               </div>
-
               <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-iris-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                  Iris
-                </h1>
-                <p className="text-xs text-iris-400/70">Vision Capture AI</p>
+                <span className="text-sm font-semibold text-[#fafafa]">Iris</span>
+                <span className="ml-2 font-mono text-[10px] uppercase tracking-wider text-[#52525b]">
+                  Vision Capture
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Center: Context Status */}
-          <div className="hidden md:flex items-center gap-4">
-            {/* Confidence Indicator */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-dark-800/50 border border-iris-800/50">
-              <Sparkles className="w-4 h-4 text-iris-400" />
-              <div className="flex items-center gap-2">
-                <div className="w-16 h-1.5 bg-dark-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-iris-500 to-purple-500 transition-all duration-500"
-                    style={{ width: `${Math.round(confidenceScore * 100)}%` }}
-                  />
-                </div>
-                <span className="text-xs text-iris-300">
-                  {Math.round(confidenceScore * 100)}% Vibe
-                </span>
+          {/* Centre — confidence + stack */}
+          <div className="hidden items-center gap-4 md:flex">
+            {/* Confidence bar */}
+            <div className="flex items-center gap-2.5">
+              <span className="font-mono text-xs text-[#52525b]">Vibe</span>
+              <div className="relative h-1.5 w-24 overflow-hidden rounded-full bg-[#1c1c1f]">
+                <motion.div
+                  className="h-full rounded-full bg-violet-500"
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 0.5, ease }}
+                />
               </div>
+              <span
+                className={`font-mono text-xs font-medium ${
+                  pct >= 70 ? 'text-green-400' : pct >= 40 ? 'text-amber-400' : 'text-[#52525b]'
+                }`}
+              >
+                {pct}%
+              </span>
             </div>
 
-            {/* Tech Stack Pills */}
+            {/* Stack pills */}
             {(techStack.frontend || techStack.backend) && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 {techStack.frontend && (
-                  <span className="px-2 py-1 text-xs rounded-md bg-iris-900/50 text-iris-300 border border-iris-800/50">
-                    {techStack.frontend.name}
-                  </span>
+                  <span className="badge badge-active text-[10px]">{techStack.frontend.name}</span>
                 )}
                 {techStack.backend && (
-                  <span className="px-2 py-1 text-xs rounded-md bg-purple-900/50 text-purple-300 border border-purple-800/50">
-                    {techStack.backend.name}
-                  </span>
+                  <span className="badge badge-cyan text-[10px]">{techStack.backend.name}</span>
                 )}
               </div>
             )}
           </div>
 
-          {/* Right: Handoff Button */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleBuildThis}
-              disabled={!isReadyForHandoff || isHandoffLoading || isHandoffPending}
-              className={clsx(
-                'group flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300',
-                isReadyForHandoff && !isHandoffLoading && !isHandoffPending
-                  ? 'bg-gradient-to-r from-iris-600 via-purple-600 to-pink-600 hover:from-iris-500 hover:via-purple-500 hover:to-pink-500 text-white shadow-lg shadow-iris-600/25 hover:shadow-iris-500/40 hover:scale-105'
-                  : 'bg-dark-800 text-dark-400 cursor-not-allowed border border-dark-700'
-              )}
-              title={isReadyForHandoff ? 'Send your vision to Aegis for building' : 'Add more details to your project vision'}
-            >
-              {isHandoffLoading || isHandoffPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Handing off...</span>
-                </>
-              ) : (
-                <>
-                  <Zap className={clsx(
-                    'w-4 h-4 transition-transform duration-300',
-                    isReadyForHandoff && 'group-hover:rotate-12'
-                  )} />
-                  <span>Send to Aegis</span>
-                  <Send className={clsx(
-                    'w-4 h-4 transition-transform duration-300',
-                    isReadyForHandoff && 'group-hover:translate-x-0.5'
-                  )} />
-                </>
-              )}
-            </button>
-          </div>
+          {/* Right — handoff */}
+          <button
+            onClick={handleBuild}
+            disabled={!isReady || isHandoffLoading || isHandoffPending}
+            className={`btn gap-2 ${isReady ? 'btn-primary' : 'btn-secondary'}`}
+          >
+            {isHandoffLoading || isHandoffPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Sending…
+              </>
+            ) : (
+              <>
+                <Zap className="h-4 w-4" />
+                Send to Aegis
+                <Send className="h-3.5 w-3.5 opacity-60" />
+              </>
+            )}
+          </button>
         </div>
       </header>
 
-      {/* Handoff Instruction Banner */}
-      {!isReadyForHandoff && (
-        <div className="flex-shrink-0 px-6 py-2 bg-gradient-to-r from-iris-900/30 via-purple-900/20 to-pink-900/30 border-b border-iris-800/30">
-          <p className="text-center text-sm text-iris-300/80">
-            <Sparkles className="w-4 h-4 inline-block mr-2 text-iris-400" />
-            Tell me about your project idea. Once I capture your vibe, click <strong className="text-iris-300">"Send to Aegis"</strong> or type <strong className="text-iris-300">"Build this"</strong> to start building!
+      {/* ── Hint banner ── */}
+      {!isReady && (
+        <div className="flex-shrink-0 border-b border-[#1c1c1f] bg-[#111113] px-5 py-2.5">
+          <p className="text-center text-xs text-[#52525b]">
+            Tell me about your project.{' '}
+            Once vibe confidence hits 30 %+ the{' '}
+            <span className="text-[#a1a1aa]">Send to Aegis</span>{' '}
+            button unlocks.
           </p>
         </div>
       )}
 
-      {/* Main Content - Split Pane */}
-      <main className="flex-1 overflow-hidden">
+      {/* ── Main ── */}
+      <main className="min-h-0 flex-1">
         <SplitPane />
       </main>
 
-      {/* Floating Action Button for quick handoff (mobile-friendly) */}
-      {isReadyForHandoff && (
+      {/* Mobile FAB */}
+      {isReady && (
         <div className="fixed bottom-6 right-6 z-50 md:hidden">
           <button
-            onClick={handleBuildThis}
+            onClick={handleBuild}
             disabled={isHandoffLoading || isHandoffPending}
-            className="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-iris-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-iris-600/40 hover:shadow-iris-500/60 transition-all duration-300 hover:scale-110"
-            title="Send to Aegis"
+            className="btn btn-primary h-14 w-14 rounded-full p-0 shadow-lg shadow-violet-600/25"
           >
             {isHandoffLoading || isHandoffPending ? (
-              <Loader2 className="w-6 h-6 animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              <Zap className="w-6 h-6" />
+              <Zap className="h-5 w-5" />
             )}
           </button>
         </div>
       )}
-
-      {/* Decorative gradient overlays */}
-      <div className="fixed top-0 left-0 w-full h-64 bg-gradient-to-b from-iris-900/10 to-transparent pointer-events-none -z-10" />
-      <div className="fixed bottom-0 left-0 w-full h-32 bg-gradient-to-t from-purple-900/10 to-transparent pointer-events-none -z-10" />
     </div>
   );
 }

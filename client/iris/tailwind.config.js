@@ -9,37 +9,56 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Bento Box dark theme palette
+        /* ── Neutral base (zinc-based) ── */
+        surface: {
+          DEFAULT: '#09090b',
+          subtle:  '#111113',
+          elevated:'#141416',
+        },
+        border: {
+          DEFAULT: '#27272a',
+          subtle:  '#1c1c1f',
+          strong:  '#3f3f46',
+        },
+        text: {
+          DEFAULT: '#fafafa',
+          muted:   '#a1a1aa',
+          faint:   '#52525b',
+        },
+
+        /* ── Keep legacy dark scale for old code ── */
         dark: {
-          950: '#0a0a0f',  // Deepest background
-          900: '#12121a',  // Card background
-          800: '#1a1a25',  // Borders
-          700: '#252532',  // Hover states
-          600: '#363645',  // Elevated elements
-          500: '#4a4a5a',  // Muted elements
-          400: '#6b6b80',  // Muted text
-          300: '#9090a0',  // Secondary text
-          200: '#e0e0e8',  // Primary text
-          100: '#f0f0f5',  // Bright text
-          50: '#fafafc',   // White text
+          950: '#09090b',
+          900: '#111113',
+          800: '#141416',
+          700: '#1c1c1f',
+          600: '#27272a',
+          500: '#3f3f46',
+          400: '#52525b',
+          300: '#71717a',
+          200: '#a1a1aa',
+          100: '#d4d4d8',
+          50:  '#fafafa',
         },
-        // Iris brand colors - purple accent
+
+        /* ── Iris brand — violet ── */
         iris: {
-          50: '#faf5ff',
-          100: '#f3e8ff',
-          200: '#e9d5ff',
-          300: '#d8b4fe',
-          400: '#c084fc',
-          500: '#a855f7',
-          600: '#9333ea',
-          700: '#7e22ce',
-          800: '#6b21a8',
-          900: '#581c87',
-          950: '#3b0764',
+          50:  '#f5f3ff',
+          100: '#ede9fe',
+          200: '#ddd6fe',
+          300: '#c4b5fd',
+          400: '#a78bfa',
+          500: '#8b5cf6',
+          600: '#7c3aed',
+          700: '#6d28d9',
+          800: '#5b21b6',
+          900: '#4c1d95',
+          950: '#2e1065',
         },
-        // Aegis brand colors - cyan accent
+
+        /* ── Aegis brand — cyan ── */
         aegis: {
-          50: '#ecfeff',
+          50:  '#ecfeff',
           100: '#cffafe',
           200: '#a5f3fc',
           300: '#67e8f9',
@@ -51,36 +70,66 @@ module.exports = {
           900: '#164e63',
           950: '#083344',
         },
-        // Status colors
+
+        /* ── Status ── */
         status: {
-          idle: '#6b7280',
-          working: '#3b82f6',
-          success: '#10b981',
-          error: '#ef4444',
+          idle:    '#52525b',
+          active:  '#8b5cf6',
+          success: '#22c55e',
           warning: '#f59e0b',
+          error:   '#ef4444',
+          cyan:    '#06b6d4',
         },
       },
+
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
       },
+
       animation: {
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'spin-slow': 'spin 2s linear infinite',
-        'bounce-subtle': 'bounce 2s ease-in-out infinite',
+        'pulse-slow':    'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'spin-slow':     'spin 2s linear infinite',
+        'fade-up':       'fade-up 0.4s ease-out forwards',
+        'slide-in-right':'slide-in-right 0.25s ease-out forwards',
+        'shimmer':       'shimmer 1.5s infinite',
       },
+
+      keyframes: {
+        'fade-up': {
+          from: { opacity: '0', transform: 'translateY(12px)' },
+          to:   { opacity: '1', transform: 'translateY(0)' },
+        },
+        'slide-in-right': {
+          from: { opacity: '0', transform: 'translateX(16px)' },
+          to:   { opacity: '1', transform: 'translateX(0)' },
+        },
+        shimmer: {
+          '0%':   { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+      },
+
       boxShadow: {
-        'glow': '0 0 20px rgba(99, 102, 241, 0.3)',
-        'glow-lg': '0 0 40px rgba(99, 102, 241, 0.4)',
-        'glow-iris': '0 0 30px rgba(168, 85, 247, 0.4)',
-        'glow-aegis': '0 0 30px rgba(6, 182, 212, 0.4)',
-        'bento': '0 8px 32px rgba(0, 0, 0, 0.3)',
-        'bento-hover': '0 16px 48px rgba(0, 0, 0, 0.4)',
+        'glow-iris':   '0 0 24px rgba(139, 92, 246, 0.35)',
+        'glow-aegis':  '0 0 24px rgba(6, 182, 212, 0.3)',
+        'card':        '0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.5)',
+        'card-hover':  '0 4px 12px rgba(0,0,0,0.4)',
       },
+
       borderRadius: {
         '4xl': '2rem',
+        '5xl': '2.5rem',
+      },
+
+      backgroundImage: {
+        'grid-subtle': `linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)`,
+      },
+      backgroundSize: {
+        'grid': '48px 48px',
       },
     },
   },
   plugins: [],
-}
+};
