@@ -1,86 +1,103 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { useRef } from 'react';
+import { useGSAP } from '@gsap/react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Network, ScanEye, ShieldCheck, Clock, Monitor, FileCheck } from 'lucide-react';
+
+gsap.registerPlugin(ScrollTrigger);
 
 const features = [
   {
-    icon: '🔗',
+    icon: Network,
     title: 'Relay Bridge',
-    description: 'Real-time context sync between Cursor, Claude, and Gemini. Every change is instantly whispered to all agents.',
-    color: 'var(--accent)',
+    description: 'Real-time WebSocket relay keeps every agent on the same context. One change, instantly mirrored everywhere.',
   },
   {
-    icon: '👁️',
+    icon: ScanEye,
     title: 'Vibe Check',
-    description: 'Playwright + GPT-4o Vision verifies your UI matches the vibe. Screenshots, scores, and suggestions.',
-    color: 'var(--accent-cyan)',
+    description: 'Playwright + vision AI screenshots your UI and scores it against your design intent. Know before you ship.',
   },
   {
-    icon: '🛡️',
+    icon: ShieldCheck,
     title: 'Logic Guard',
-    description: 'AI analyzes diffs for conflicts before they happen. No more "wait, who changed that?"',
-    color: 'var(--accent-green)',
+    description: 'Analyses every diff for conflicts before they reach your codebase. No more merge surprises.',
   },
   {
-    icon: '📊',
+    icon: Clock,
     title: 'Memory Timeline',
-    description: 'Scrub back through 20 minutes of project history. See exactly what each agent did.',
-    color: 'var(--accent-orange)',
+    description: 'Scrub back through 20 minutes of agent activity. See exactly what changed, when, and why.',
   },
   {
-    icon: '🖥️',
+    icon: Monitor,
     title: 'Desktop HUD',
-    description: 'A semi-transparent overlay that shows agent status, A2A chat, and token usage in real-time.',
-    color: 'var(--accent)',
+    description: 'A floating overlay showing live agent status, token balance, and A2A messages without switching windows.',
   },
   {
-    icon: '📄',
+    icon: FileCheck,
     title: 'Verified Reports',
-    description: 'Shareable "Aegis Verified" build reports. Flex your AI-assisted code on X.',
-    color: 'var(--accent-cyan)',
+    description: 'Generate signed "Aegis Verified" build reports. Shareable proof your AI-assisted code was checked.',
   },
 ];
 
 export function FeaturesGrid() {
-  return (
-    <section className="py-32 px-6">
-      <div className="max-w-6xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="text-center mb-16"
-        >
-          <h2 className="text-4xl font-bold mb-4">Everything You Need</h2>
-          <p className="text-xl text-[var(--text-dim)]">
-            One platform to rule all your AI coding agents
-          </p>
-        </motion.div>
+  const container = useRef<HTMLDivElement>(null);
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, i) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="glass rounded-2xl p-6 hover:bg-white/5 transition group"
-            >
+  useGSAP(() => {
+    gsap.from('.features-heading', {
+      opacity: 0,
+      y: 24,
+      duration: 0.7,
+      ease: 'power3.out',
+      scrollTrigger: {
+        trigger: '.features-heading',
+        start: 'top 85%',
+      },
+    });
+
+    gsap.from('.feature-card', {
+      opacity: 0,
+      y: 28,
+      stagger: 0.08,
+      duration: 0.6,
+      ease: 'power3.out',
+      scrollTrigger: {
+        trigger: '.feature-card',
+        start: 'top 88%',
+      },
+    });
+  }, { scope: container });
+
+  return (
+    <section ref={container} className="py-32 px-6 border-t border-[var(--border)]">
+      <div className="max-w-6xl mx-auto">
+        <div className="features-heading text-center mb-20">
+          <p className="text-sm text-[var(--text-subtle)] tracking-widest uppercase mb-4 font-medium">Features</p>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-[var(--text)] mb-4">
+            Everything in one relay
+          </h2>
+          <p className="text-lg text-[var(--text-muted)] max-w-xl mx-auto">
+            Built for teams that run multiple AI coding tools and can't afford context drift.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-px bg-[var(--border)]">
+          {features.map((feature) => {
+            const Icon = feature.icon;
+            return (
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4"
-                style={{ background: `${feature.color}20`, border: `1px solid ${feature.color}40` }}
+                key={feature.title}
+                className="feature-card bg-[var(--bg)] p-8 hover:bg-[var(--surface)] transition-colors group"
               >
-                {feature.icon}
+                <div className="w-10 h-10 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center mb-5 group-hover:border-[var(--accent)] group-hover:bg-[var(--accent-dim)] transition-all">
+                  <Icon className="w-5 h-5 text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
+                </div>
+                <h3 className="text-base font-semibold text-[var(--text)] mb-2">{feature.title}</h3>
+                <p className="text-sm text-[var(--text-muted)] leading-relaxed">{feature.description}</p>
               </div>
-              <h3 className="text-lg font-bold mb-2 group-hover:text-[var(--accent)] transition">
-                {feature.title}
-              </h3>
-              <p className="text-sm text-[var(--text-dim)] leading-relaxed">
-                {feature.description}
-              </p>
-            </motion.div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

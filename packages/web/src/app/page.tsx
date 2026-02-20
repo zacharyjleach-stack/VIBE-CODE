@@ -7,24 +7,29 @@ import { Footer } from '../components/Footer';
 export default function LandingPage() {
   return (
     <main className="min-h-screen">
-      <nav className="fixed top-0 left-0 right-0 z-50 glass">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl text-[var(--accent)]">⬡</span>
-            <span className="font-bold tracking-[0.3em] text-sm">AEGIS</span>
+      {/* Nav */}
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-[var(--border)] bg-[rgba(9,9,11,0.85)] backdrop-blur-md">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition">
+            <div className="w-7 h-7 rounded-lg bg-[var(--accent)] flex items-center justify-center text-white text-sm font-bold">
+              A
+            </div>
+            <span className="font-semibold text-[var(--text)] tracking-tight">Aegis</span>
+          </Link>
+
+          <div className="hidden md:flex items-center gap-6 text-sm text-[var(--text-muted)]">
+            <Link href="#features" className="hover:text-[var(--text)] transition">Features</Link>
+            <Link href="/billing" className="hover:text-[var(--text)] transition">Pricing</Link>
+            <Link href="/docs" className="hover:text-[var(--text)] transition">Docs</Link>
+            <Link href="/changelog" className="hover:text-[var(--text)] transition">Changelog</Link>
           </div>
-          <div className="flex items-center gap-6">
-            <Link href="/billing" className="text-sm text-[var(--text-dim)] hover:text-white transition">
-              Pricing
+
+          <div className="flex items-center gap-3">
+            <Link href="/sign-in" className="hidden md:block text-sm text-[var(--text-muted)] hover:text-[var(--text)] transition">
+              Sign in
             </Link>
-            <Link href="/dashboard" className="text-sm text-[var(--text-dim)] hover:text-white transition">
-              Dashboard
-            </Link>
-            <Link
-              href="/sign-up"
-              className="px-4 py-2 bg-[var(--accent)] rounded-lg text-sm font-semibold hover:opacity-90 transition"
-            >
-              Get Started
+            <Link href="/sign-up" className="btn-primary text-sm py-2 px-4">
+              Get started free
             </Link>
           </div>
         </div>
