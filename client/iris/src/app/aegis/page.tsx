@@ -2,205 +2,285 @@
 
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNeural, type VibePayload } from '@/context/NeuralContext';
 import { useVibeStore } from '@/store/vibeStore';
 import { VisualizationPanel } from '@/components';
+import {
+  ArrowLeft, Shield, Play, Square, RotateCcw,
+  FileText, SlidersHorizontal, LayoutGrid, BarChart2,
+  CheckCircle2, AlertCircle, Loader2, Clock,
+} from 'lucide-react';
 
-// ==================== Types ====================
+/* ─────────────────────────── types ─────────────────────────── */
+
+type WorkerStatus = 'idle' | 'initializing' | 'active' | 'complete' | 'error';
+type SwarmPhase = 'standby' | 'initializing' | 'deploying' | 'active' | 'complete';
 
 interface WorkerSlot {
   id: number;
-  status: 'idle' | 'initializing' | 'active' | 'complete' | 'error';
+  status: WorkerStatus;
   task: string;
   progress: number;
 }
 
-interface Notification {
+interface Toast {
   id: string;
   message: string;
   type: 'success' | 'info' | 'warning' | 'error';
-  timestamp: number;
 }
 
-// ==================== Aegis Command Center Content ====================
+const ease = [0.16, 1, 0.3, 1] as const;
+
+/* ─────────────────────────── worker card ─────────────────────────── */
+
+const WORKER_TASKS = [
+  'Analysing requirements', 'Scaffolding project', 'Setting up DB',
+  'Creating API routes', 'Building components', 'Styling interface',
+  'Writing tests', 'Documentation', 'Security audit',
+  'Performance tuning', 'Integration tests', 'Code review',
+  'Final validation', 'Deployment prep', 'Asset optimisation', 'Launch check',
+];
+
+const STATUS_STYLES: Record<WorkerStatus, string> = {
+  idle:         'agent-idle',
+  initializing: 'agent-initializing',
+  active:       'agent-active',
+  complete:     'agent-complete',
+  error:        'agent-error',
+};
+
+const STATUS_DOT: Record<WorkerStatus, string> = {
+  idle:         'bg-[#27272a]',
+  initializing: 'bg-amber-500',
+  active:       'bg-cyan-500',
+  complete:     'bg-green-500',
+  error:        'bg-red-500',
+};
+
+function WorkerCard({ worker }: { worker: WorkerSlot }) {
+  return (
+    <motion.div
+      layout
+      className={STATUS_STYLES[worker.status]}
+      animate={{ opacity: worker.status === 'idle' ? 0.5 : 1 }}
+      transition={{ duration: 0.3 }}
+    >
+      {/* Header row */}
+      <div className="flex w-full items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`h-2 w-2 rounded-full ${STATUS_DOT[worker.status]} ${
+              worker.status === 'active' || worker.status === 'initializing' ? 'animate-pulse' : ''
+            }`}
+          />
+          <span className="font-mono text-[10px] font-semibold text-[#71717a]">
+            W-{String(worker.id).padStart(2, '0')}
+          </span>
+        </div>
+        {worker.status === 'active' && (
+          <span className="font-mono text-[10px] text-[#52525b]">{worker.progress}%</span>
+        )}
+        {worker.status === 'complete' && (
+          <CheckCircle2 className="h-3 w-3 text-green-500" />
+        )}
+        {worker.status === 'error' && (
+          <AlertCircle className="h-3 w-3 text-red-400" />
+        )}
+      </div>
+
+      {/* Task */}
+      <p className="w-full truncate text-center font-mono text-[9px] text-[#52525b] leading-tight">
+        {worker.task}
+      </p>
+
+      {/* Progress bar */}
+      {worker.status === 'active' && (
+        <div className="w-full">
+          <div className="h-0.5 w-full overflow-hidden rounded-full bg-[#1c1c1f]">
+            <motion.div
+              className="h-full rounded-full bg-cyan-500"
+              animate={{ width: `${worker.progress}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+/* ─────────────────────────── phase badge ─────────────────────────── */
+
+const PHASE_CONFIG: Record<SwarmPhase, { label: string; color: string; pulse: boolean }> = {
+  standby:      { label: 'Standby',      color: 'text-[#52525b]',   pulse: false },
+  initializing: { label: 'Initializing', color: 'text-amber-400',   pulse: true },
+  deploying:    { label: 'Deploying',    color: 'text-cyan-400',    pulse: true },
+  active:       { label: 'Active',       color: 'text-green-400',   pulse: true },
+  complete:     { label: 'Complete',     color: 'text-green-400',   pulse: false },
+};
+
+function PhaseBadge({ phase }: { phase: SwarmPhase }) {
+  const cfg = PHASE_CONFIG[phase];
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`h-2 w-2 rounded-full ${STATUS_DOT[
+        phase === 'standby' ? 'idle' :
+        phase === 'complete' ? 'complete' :
+        phase === 'active' ? 'active' :
+        'initializing'
+      ]} ${cfg.pulse ? 'animate-pulse' : ''}`} />
+      <span className={`font-mono text-xs font-medium uppercase ${cfg.color}`}>{cfg.label}</span>
+    </div>
+  );
+}
+
+/* ─────────────────────────── stats card ─────────────────────────── */
+
+function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="card flex flex-col items-center justify-center p-4 text-center">
+      <motion.div
+        className={`text-3xl font-bold font-mono ${color}`}
+        key={value}
+        initial={{ scale: 1.2, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.25 }}
+      >
+        {value}
+      </motion.div>
+      <div className="mt-1 text-[10px] font-medium uppercase tracking-wider text-[#52525b]">{label}</div>
+    </div>
+  );
+}
+
+/* ─────────────────────────── toast ─────────────────────────── */
+
+function ToastStack({ toasts }: { toasts: Toast[] }) {
+  const TYPE_STYLES: Record<Toast['type'], string> = {
+    success: 'border-green-500/20 bg-green-500/10 text-green-300',
+    info:    'border-cyan-500/20  bg-cyan-500/10  text-cyan-300',
+    warning: 'border-amber-500/20 bg-amber-500/10 text-amber-300',
+    error:   'border-red-500/20   bg-red-500/10   text-red-300',
+  };
+
+  return (
+    <div className="fixed right-5 top-20 z-50 flex flex-col gap-2">
+      <AnimatePresence>
+        {toasts.map((t) => (
+          <motion.div
+            key={t.id}
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 16 }}
+            transition={{ duration: 0.25, ease }}
+            className={`rounded-xl border px-4 py-3 text-sm font-medium shadow-lg ${TYPE_STYLES[t.type]}`}
+          >
+            {t.message}
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ─────────────────────────── main content ─────────────────────────── */
 
 function AegisContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { hasPendingHandoff, acknowledgeHandoff } = useNeural();
-  const {
-    userIntent,
-    setUserIntent,
-    techStack,
-    updateTechStack,
-    constraints,
-    agents,
-    updateAgentStatus,
-    resetAgents,
-    handoffStatus,
-    setHandoffStatus,
-  } = useVibeStore();
+  const { userIntent, setUserIntent, updateTechStack, resetAgents, setHandoffStatus } = useVibeStore();
 
-  // Local state
-  const [missionBrief, setMissionBrief] = useState<string>('');
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [missionBrief, setMissionBrief] = useState('');
+  const [toasts, setToasts] = useState<Toast[]>([]);
   const [isSwarmActive, setIsSwarmActive] = useState(false);
-  const [swarmPhase, setSwarmPhase] = useState<'standby' | 'initializing' | 'deploying' | 'active' | 'complete'>('standby');
+  const [swarmPhase, setSwarmPhase] = useState<SwarmPhase>('standby');
   const [receivedVibe, setReceivedVibe] = useState<VibePayload | null>(null);
   const [manualMode, setManualMode] = useState(false);
   const [manualIntent, setManualIntent] = useState('');
-
-  // Worker slots for the grid
   const [workers, setWorkers] = useState<WorkerSlot[]>(
     Array.from({ length: 16 }, (_, i) => ({
-      id: i + 1,
-      status: 'idle',
-      task: 'Awaiting orders',
-      progress: 0,
+      id: i + 1, status: 'idle', task: 'Awaiting orders', progress: 0,
     }))
   );
 
-  // ==================== Notification System ====================
-
-  const showNotification = useCallback((message: string, type: Notification['type'] = 'info') => {
-    const notification: Notification = {
-      id: `notif_${Date.now()}`,
-      message,
-      type,
-      timestamp: Date.now(),
-    };
-    setNotifications(prev => [...prev, notification]);
-
-    // Auto-dismiss after 5 seconds
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== notification.id));
-    }, 5000);
+  /* ── toasts ── */
+  const toast = useCallback((message: string, type: Toast['type'] = 'info') => {
+    const id = `t-${Date.now()}`;
+    setToasts((p) => [...p, { id, message, type }]);
+    setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 4000);
   }, []);
 
-  // ==================== Swarm Initialization ====================
-
+  /* ── swarm init ── */
   const initializeSwarm = useCallback(async () => {
     setSwarmPhase('initializing');
     setIsSwarmActive(true);
     setHandoffStatus('in_progress');
 
-    // Simulate worker initialization with staggered start
     for (let i = 0; i < 16; i++) {
-      await new Promise(resolve => setTimeout(resolve, 150));
-      setWorkers(prev => prev.map((w, idx) =>
-        idx === i ? { ...w, status: 'initializing', task: 'Booting up...', progress: 0 } : w
-      ));
+      await new Promise((r) => setTimeout(r, 120));
+      setWorkers((p) =>
+        p.map((w, idx) => idx === i ? { ...w, status: 'initializing', task: 'Booting…', progress: 0 } : w)
+      );
     }
 
     setSwarmPhase('deploying');
-    showNotification('Swarm initialized. Deploying workers...', 'info');
+    toast('Swarm initialised — deploying workers…', 'info');
 
-    // Activate workers sequentially
     for (let i = 0; i < 16; i++) {
-      await new Promise(resolve => setTimeout(resolve, 200));
-      const tasks = [
-        'Analyzing requirements',
-        'Scaffolding project',
-        'Setting up database',
-        'Creating API routes',
-        'Building components',
-        'Styling interface',
-        'Writing tests',
-        'Documentation',
-        'Security audit',
-        'Performance optimization',
-        'Integration testing',
-        'Code review',
-        'Final validation',
-        'Deployment prep',
-        'Asset optimization',
-        'Launch verification',
-      ];
-      setWorkers(prev => prev.map((w, idx) =>
-        idx === i ? { ...w, status: 'active', task: tasks[i], progress: 10 } : w
-      ));
+      await new Promise((r) => setTimeout(r, 160));
+      setWorkers((p) =>
+        p.map((w, idx) => idx === i ? { ...w, status: 'active', task: WORKER_TASKS[i], progress: 5 } : w)
+      );
     }
 
     setSwarmPhase('active');
-    showNotification('All 16 workers deployed and active!', 'success');
-  }, [setHandoffStatus, showNotification]);
+    toast('All 16 workers active and coding!', 'success');
+  }, [setHandoffStatus, toast]);
 
-  // ==================== Auto-Receive Mode ====================
-
+  /* ── auto-receive ── */
   useEffect(() => {
     const mode = searchParams.get('mode');
-
     if (mode === 'auto_receive' && hasPendingHandoff()) {
       const vibe = acknowledgeHandoff();
-
       if (vibe) {
-        // Populate mission and state from received vibe
         setReceivedVibe(vibe);
         setUserIntent(vibe.userIntent);
         setMissionBrief(vibe.userIntent);
-
-        // Update tech stack if provided
-        if (vibe.techStack) {
-          if (vibe.techStack.frontend) {
-            updateTechStack({ frontend: { name: vibe.techStack.frontend } });
-          }
-          if (vibe.techStack.backend) {
-            updateTechStack({ backend: { name: vibe.techStack.backend } });
-          }
-          if (vibe.techStack.database) {
-            updateTechStack({ database: { type: 'other', name: vibe.techStack.database } });
-          }
-        }
-
-        showNotification('Mission received from Iris!', 'success');
-
-        // Auto-start swarm initialization after a brief delay
-        setTimeout(() => {
-          initializeSwarm();
-        }, 1000);
+        if (vibe.techStack?.frontend) updateTechStack({ frontend: { name: vibe.techStack.frontend } });
+        if (vibe.techStack?.backend) updateTechStack({ backend: { name: vibe.techStack.backend } });
+        toast('Mission received from Iris!', 'success');
+        setTimeout(() => initializeSwarm(), 800);
       }
     } else if (mode !== 'auto_receive') {
       setManualMode(true);
     }
-  }, [searchParams, hasPendingHandoff, acknowledgeHandoff, setUserIntent, updateTechStack, showNotification, initializeSwarm]);
+  }, [searchParams, hasPendingHandoff, acknowledgeHandoff, setUserIntent, updateTechStack, toast, initializeSwarm]);
 
-  // ==================== Worker Progress Simulation ====================
-
+  /* ── progress simulation ── */
   useEffect(() => {
     if (swarmPhase !== 'active') return;
-
-    const interval = setInterval(() => {
-      setWorkers(prev => {
-        const updated = prev.map(worker => {
-          if (worker.status === 'active' && worker.progress < 100) {
-            const increment = Math.floor(Math.random() * 5) + 1;
-            const newProgress = Math.min(worker.progress + increment, 100);
-            return {
-              ...worker,
-              progress: newProgress,
-              status: newProgress >= 100 ? 'complete' as const : 'active' as const,
-            };
-          }
-          return worker;
+    const id = setInterval(() => {
+      setWorkers((prev) => {
+        const updated = prev.map((w) => {
+          if (w.status !== 'active' || w.progress >= 100) return w;
+          const next = Math.min(w.progress + Math.floor(Math.random() * 4) + 1, 100);
+          return { ...w, progress: next, status: next >= 100 ? 'complete' as const : 'active' as const };
         });
-
-        // Check if all workers are complete
-        const allComplete = updated.every(w => w.status === 'complete');
-        if (allComplete) {
+        const allDone = updated.every((w) => w.status === 'complete');
+        if (allDone) {
           setSwarmPhase('complete');
           setHandoffStatus('completed');
-          showNotification('Mission complete! All workers have finished their tasks.', 'success');
+          toast('Mission complete! All workers finished.', 'success');
         }
-
         return updated;
       });
-    }, 500);
+    }, 400);
+    return () => clearInterval(id);
+  }, [swarmPhase, setHandoffStatus, toast]);
 
-    return () => clearInterval(interval);
-  }, [swarmPhase, setHandoffStatus, showNotification]);
-
-  // ==================== Control Functions ====================
-
+  /* ── controls ── */
   const handleStart = useCallback(() => {
     if (manualMode && manualIntent.trim()) {
       setUserIntent(manualIntent);
@@ -214,302 +294,214 @@ function AegisContent() {
     setSwarmPhase('standby');
     setHandoffStatus('idle');
     resetAgents();
-    setWorkers(prev => prev.map(w => ({
-      ...w,
-      status: 'idle',
-      task: 'Awaiting orders',
-      progress: 0,
-    })));
-    showNotification('Swarm operations halted.', 'warning');
-  }, [setHandoffStatus, resetAgents, showNotification]);
+    setWorkers((p) => p.map((w) => ({ ...w, status: 'idle', task: 'Awaiting orders', progress: 0 })));
+    toast('Swarm halted.', 'warning');
+  }, [setHandoffStatus, resetAgents, toast]);
 
   const handleReset = useCallback(() => {
     handleStop();
     setMissionBrief('');
     setManualIntent('');
     setReceivedVibe(null);
-    showNotification('System reset complete.', 'info');
-  }, [handleStop, showNotification]);
+    toast('System reset.', 'info');
+  }, [handleStop, toast]);
 
-  // ==================== Render ====================
+  /* ─── stats ─── */
+  const stats = {
+    active:   workers.filter((w) => w.status === 'active').length,
+    complete: workers.filter((w) => w.status === 'complete').length,
+    init:     workers.filter((w) => w.status === 'initializing').length,
+    idle:     workers.filter((w) => w.status === 'idle').length,
+  };
+  const overallProgress = Math.round(
+    workers.reduce((acc, w) => acc + w.progress, 0) / 16
+  );
 
+  /* ─── render ─── */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
-      {/* Notification Stack */}
-      <div className="fixed top-4 right-4 z-50 space-y-2">
-        {notifications.map(notif => (
-          <div
-            key={notif.id}
-            className={`
-              px-4 py-3 rounded-lg border backdrop-blur-xl shadow-lg
-              animate-slide-in-right
-              ${notif.type === 'success' ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300' : ''}
-              ${notif.type === 'info' ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300' : ''}
-              ${notif.type === 'warning' ? 'bg-amber-500/20 border-amber-500/50 text-amber-300' : ''}
-              ${notif.type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-300' : ''}
-            `}
+    <div className="min-h-screen bg-[#09090b] text-[#fafafa]">
+      <ToastStack toasts={toasts} />
+
+      {/* ── Nav ── */}
+      <header className="sticky top-0 z-40 border-b border-[#1c1c1f] bg-[#09090b]/90 backdrop-blur-xl">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-6">
+          <button
+            onClick={() => router.push('/')}
+            className="btn-ghost btn gap-1.5 text-sm"
           >
-            <div className="flex items-center gap-2">
-              {notif.type === 'success' && <CheckIcon className="w-5 h-5" />}
-              {notif.type === 'info' && <InfoIcon className="w-5 h-5" />}
-              {notif.type === 'warning' && <WarningIcon className="w-5 h-5" />}
-              {notif.type === 'error' && <ErrorIcon className="w-5 h-5" />}
-              <span className="font-medium">{notif.message}</span>
+            <ArrowLeft className="h-4 w-4" />
+            Iris
+          </button>
+
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+              <Shield className="h-4 w-4 text-cyan-400" strokeWidth={1.5} />
             </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-xl sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Back Button */}
-            <button
-              onClick={() => router.push('/')}
-              className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-            >
-              <ArrowLeftIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">Return to Iris</span>
-            </button>
-
-            {/* Aegis Branding */}
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400 via-cyan-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-cyan-500/25">
-                <ShieldIcon className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-                  AEGIS
-                </h1>
-                <p className="text-xs text-slate-400 font-mono uppercase tracking-wider">
-                  Swarm Command Center
-                </p>
-              </div>
-            </div>
-
-            {/* Status Indicator */}
-            <div className="flex items-center gap-2">
-              <div className={`
-                w-3 h-3 rounded-full
-                ${swarmPhase === 'standby' ? 'bg-slate-500' : ''}
-                ${swarmPhase === 'initializing' ? 'bg-amber-500 animate-pulse' : ''}
-                ${swarmPhase === 'deploying' ? 'bg-cyan-500 animate-pulse' : ''}
-                ${swarmPhase === 'active' ? 'bg-emerald-500 animate-pulse' : ''}
-                ${swarmPhase === 'complete' ? 'bg-emerald-500' : ''}
-              `} />
-              <span className="text-sm font-mono text-slate-300 uppercase">
-                {swarmPhase}
+            <div>
+              <span className="font-semibold text-sm text-[#fafafa]">Aegis</span>
+              <span className="ml-2 font-mono text-[10px] uppercase tracking-wider text-[#52525b]">
+                Swarm Command
               </span>
             </div>
           </div>
+
+          <PhaseBadge phase={swarmPhase} />
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Mission Brief & Controls */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Mission Brief Card */}
-            <div className="rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-700 bg-gradient-to-r from-cyan-500/10 to-emerald-500/10">
-                <h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                  <DocumentIcon className="w-4 h-4 text-cyan-400" />
-                  Mission Brief
-                </h2>
+      {/* ── Layout ── */}
+      <main className="mx-auto max-w-7xl px-6 py-6">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_1fr]">
+
+          {/* ── Left sidebar ── */}
+          <div className="flex flex-col gap-4">
+
+            {/* Mission Brief */}
+            <div className="card overflow-hidden">
+              <div className="flex items-center gap-2 border-b border-[#1c1c1f] px-4 py-3">
+                <FileText className="h-3.5 w-3.5 text-[#52525b]" />
+                <span className="text-xs font-medium text-[#a1a1aa]">Mission Brief</span>
               </div>
               <div className="p-4">
                 {receivedVibe ? (
-                  <div className="space-y-4">
-                    <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                        <span className="text-xs font-mono text-emerald-400 uppercase">
-                          Received from Iris
-                        </span>
+                  <div className="space-y-3">
+                    <div className="rounded-lg border border-green-500/15 bg-green-500/5 p-3">
+                      <div className="mb-1.5 flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                        <span className="font-mono text-[10px] uppercase text-green-400">From Iris</span>
                       </div>
-                      <p className="text-sm text-slate-300 font-mono leading-relaxed">
-                        {missionBrief || 'No mission details received.'}
+                      <p className="font-mono text-xs leading-relaxed text-[#a1a1aa]">
+                        {missionBrief || 'No details.'}
                       </p>
                     </div>
-
                     {receivedVibe.techStack && (
-                      <div className="space-y-2">
-                        <h3 className="text-xs font-mono text-slate-400 uppercase">Tech Stack</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {receivedVibe.techStack.frontend && (
-                            <span className="px-2 py-1 text-xs font-mono rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                              {receivedVibe.techStack.frontend}
-                            </span>
-                          )}
-                          {receivedVibe.techStack.backend && (
-                            <span className="px-2 py-1 text-xs font-mono rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                              {receivedVibe.techStack.backend}
-                            </span>
-                          )}
-                          {receivedVibe.techStack.database && (
-                            <span className="px-2 py-1 text-xs font-mono rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                              {receivedVibe.techStack.database}
-                            </span>
-                          )}
-                        </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[receivedVibe.techStack.frontend, receivedVibe.techStack.backend, receivedVibe.techStack.database]
+                          .filter(Boolean)
+                          .map((v) => (
+                            <span key={v} className="badge badge-cyan font-mono text-[10px]">{v}</span>
+                          ))}
                       </div>
                     )}
                   </div>
                 ) : manualMode ? (
-                  <div className="space-y-4">
-                    <p className="text-sm text-slate-400">
-                      No auto-receive detected. Enter mission parameters manually:
-                    </p>
-                    <textarea
-                      value={manualIntent}
-                      onChange={(e) => setManualIntent(e.target.value)}
-                      placeholder="Describe your mission objectives..."
-                      className="w-full h-32 px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-slate-200 text-sm font-mono placeholder:text-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none resize-none"
-                    />
-                  </div>
+                  <textarea
+                    value={manualIntent}
+                    onChange={(e) => setManualIntent(e.target.value)}
+                    placeholder="Describe your mission…"
+                    className="input h-28 resize-none text-xs font-mono"
+                  />
                 ) : (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500" />
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin text-[#52525b]" />
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Control Panel */}
-            <div className="rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-700 bg-gradient-to-r from-cyan-500/10 to-emerald-500/10">
-                <h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                  <ControlIcon className="w-4 h-4 text-cyan-400" />
-                  Control Panel
-                </h2>
+            {/* Controls */}
+            <div className="card overflow-hidden">
+              <div className="flex items-center gap-2 border-b border-[#1c1c1f] px-4 py-3">
+                <SlidersHorizontal className="h-3.5 w-3.5 text-[#52525b]" />
+                <span className="text-xs font-medium text-[#a1a1aa]">Control Panel</span>
               </div>
-              <div className="p-4 space-y-3">
+              <div className="flex flex-col gap-2 p-4">
                 <button
                   onClick={handleStart}
                   disabled={isSwarmActive || (!missionBrief && !manualIntent.trim())}
-                  className="w-full px-4 py-3 rounded-lg font-semibold text-sm transition-all
-                    bg-gradient-to-r from-cyan-500 to-emerald-500 text-white
-                    hover:from-cyan-400 hover:to-emerald-400
-                    disabled:opacity-50 disabled:cursor-not-allowed
-                    shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40"
+                  className="btn btn-primary w-full justify-center"
                 >
-                  <div className="flex items-center justify-center gap-2">
-                    <PlayIcon className="w-5 h-5" />
-                    <span>Deploy Swarm</span>
-                  </div>
+                  <Play className="h-4 w-4" />
+                  Deploy Swarm
                 </button>
-
-                <button
-                  onClick={handleStop}
-                  disabled={!isSwarmActive}
-                  className="w-full px-4 py-3 rounded-lg font-semibold text-sm transition-all
-                    bg-red-500/20 text-red-400 border border-red-500/30
-                    hover:bg-red-500/30
-                    disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <StopIcon className="w-5 h-5" />
-                    <span>Halt Operations</span>
-                  </div>
+                <button onClick={handleStop} disabled={!isSwarmActive} className="btn btn-danger w-full justify-center">
+                  <Square className="h-4 w-4" />
+                  Halt Operations
                 </button>
-
-                <button
-                  onClick={handleReset}
-                  className="w-full px-4 py-3 rounded-lg font-semibold text-sm transition-all
-                    bg-slate-700/50 text-slate-300 border border-slate-600
-                    hover:bg-slate-700"
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <ResetIcon className="w-5 h-5" />
-                    <span>Reset System</span>
-                  </div>
+                <button onClick={handleReset} className="btn btn-secondary w-full justify-center">
+                  <RotateCcw className="h-4 w-4" />
+                  Reset System
                 </button>
               </div>
             </div>
 
-            {/* Mission Stats */}
-            <div className="rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-700">
-                <h2 className="text-sm font-semibold text-slate-200">Mission Statistics</h2>
+            {/* Stats */}
+            <div className="card overflow-hidden">
+              <div className="flex items-center gap-2 border-b border-[#1c1c1f] px-4 py-3">
+                <BarChart2 className="h-3.5 w-3.5 text-[#52525b]" />
+                <span className="text-xs font-medium text-[#a1a1aa]">Statistics</span>
               </div>
-              <div className="p-4 grid grid-cols-2 gap-4">
-                <div className="text-center p-3 rounded-lg bg-slate-900/50">
-                  <div className="text-2xl font-bold text-cyan-400 font-mono">
-                    {workers.filter(w => w.status === 'active').length}
-                  </div>
-                  <div className="text-xs text-slate-400 uppercase mt-1">Active</div>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-slate-900/50">
-                  <div className="text-2xl font-bold text-emerald-400 font-mono">
-                    {workers.filter(w => w.status === 'complete').length}
-                  </div>
-                  <div className="text-xs text-slate-400 uppercase mt-1">Complete</div>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-slate-900/50">
-                  <div className="text-2xl font-bold text-amber-400 font-mono">
-                    {workers.filter(w => w.status === 'initializing').length}
-                  </div>
-                  <div className="text-xs text-slate-400 uppercase mt-1">Init</div>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-slate-900/50">
-                  <div className="text-2xl font-bold text-slate-400 font-mono">
-                    {workers.filter(w => w.status === 'idle').length}
-                  </div>
-                  <div className="text-xs text-slate-400 uppercase mt-1">Standby</div>
-                </div>
+              <div className="grid grid-cols-2 gap-2 p-4">
+                <StatCard label="Active"   value={stats.active}   color="text-cyan-400" />
+                <StatCard label="Complete" value={stats.complete} color="text-green-400" />
+                <StatCard label="Init"     value={stats.init}     color="text-amber-400" />
+                <StatCard label="Idle"     value={stats.idle}     color="text-[#52525b]" />
               </div>
+
+              {/* Overall progress bar */}
+              {isSwarmActive && (
+                <div className="border-t border-[#1c1c1f] px-4 pb-4 pt-3">
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <span className="text-[10px] text-[#52525b]">Overall progress</span>
+                    <span className="font-mono text-[10px] text-[#71717a]">{overallProgress}%</span>
+                  </div>
+                  <div className="h-1 w-full overflow-hidden rounded-full bg-[#1c1c1f]">
+                    <motion.div
+                      className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-green-500"
+                      animate={{ width: `${overallProgress}%` }}
+                      transition={{ duration: 0.5 }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Right Column - Swarm Grid */}
-          <div className="lg:col-span-2">
-            <div className="rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur-xl overflow-hidden h-full">
-              <div className="px-4 py-3 border-b border-slate-700 bg-gradient-to-r from-cyan-500/10 to-emerald-500/10">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                    <SwarmIcon className="w-4 h-4 text-cyan-400" />
-                    Swarm Status Grid
-                  </h2>
-                  <span className="text-xs font-mono text-slate-400">
-                    16 Worker Slots
-                  </span>
+          {/* ── Right: Swarm grid ── */}
+          <div className="flex flex-col gap-4">
+            <div className="card flex-1 overflow-hidden">
+              <div className="flex items-center justify-between border-b border-[#1c1c1f] px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <LayoutGrid className="h-3.5 w-3.5 text-[#52525b]" />
+                  <span className="text-xs font-medium text-[#a1a1aa]">Swarm Grid</span>
                 </div>
+                <span className="font-mono text-[10px] text-[#3f3f46]">16 SLOTS</span>
               </div>
+
               <div className="p-4">
-                <div className="grid grid-cols-4 gap-3">
-                  {workers.map((worker) => (
-                    <WorkerCard key={worker.id} worker={worker} />
+                <div className="grid grid-cols-4 gap-2 sm:grid-cols-4 md:grid-cols-8 lg:grid-cols-4 xl:grid-cols-8">
+                  {workers.map((w) => (
+                    <WorkerCard key={w.id} worker={w} />
                   ))}
                 </div>
 
                 {/* Legend */}
-                <div className="mt-6 pt-4 border-t border-slate-700">
-                  <div className="flex flex-wrap gap-4 justify-center">
-                    <LegendItem color="bg-slate-500" label="Standby" />
-                    <LegendItem color="bg-amber-500" label="Initializing" />
-                    <LegendItem color="bg-cyan-500" label="Active" />
-                    <LegendItem color="bg-emerald-500" label="Complete" />
-                    <LegendItem color="bg-red-500" label="Error" />
-                  </div>
+                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#1c1c1f] pt-4">
+                  {[
+                    { label: 'Standby',      color: 'bg-[#27272a]' },
+                    { label: 'Initializing', color: 'bg-amber-500' },
+                    { label: 'Active',       color: 'bg-cyan-500' },
+                    { label: 'Complete',     color: 'bg-green-500' },
+                    { label: 'Error',        color: 'bg-red-500' },
+                  ].map((l) => (
+                    <div key={l.label} className="flex items-center gap-1.5">
+                      <span className={`h-2 w-2 rounded-full ${l.color}`} />
+                      <span className="font-mono text-[10px] text-[#52525b]">{l.label}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Visualization Panel Section */}
-        <div className="mt-6">
-          <div className="rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-700 bg-gradient-to-r from-cyan-500/10 to-emerald-500/10">
-              <h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                <ChartIcon className="w-4 h-4 text-cyan-400" />
-                System Visualization
-              </h2>
-            </div>
-            <div className="h-[400px]">
-              <VisualizationPanel />
+            {/* Visualisation */}
+            <div className="card overflow-hidden">
+              <div className="flex items-center gap-2 border-b border-[#1c1c1f] px-4 py-3">
+                <Clock className="h-3.5 w-3.5 text-[#52525b]" />
+                <span className="text-xs font-medium text-[#a1a1aa]">System Visualisation</span>
+              </div>
+              <div className="h-[360px]">
+                <VisualizationPanel />
+              </div>
             </div>
           </div>
         </div>
@@ -518,203 +510,22 @@ function AegisContent() {
   );
 }
 
-// ==================== Worker Card Component ====================
-
-interface WorkerCardProps {
-  worker: WorkerSlot;
-}
-
-function WorkerCard({ worker }: WorkerCardProps) {
-  const statusColors: Record<WorkerSlot['status'], string> = {
-    idle: 'border-slate-600 bg-slate-800/30',
-    initializing: 'border-amber-500/50 bg-amber-500/10',
-    active: 'border-cyan-500/50 bg-cyan-500/10',
-    complete: 'border-emerald-500/50 bg-emerald-500/10',
-    error: 'border-red-500/50 bg-red-500/10',
-  };
-
-  const statusDotColors: Record<WorkerSlot['status'], string> = {
-    idle: 'bg-slate-500',
-    initializing: 'bg-amber-500 animate-pulse',
-    active: 'bg-cyan-500 animate-pulse',
-    complete: 'bg-emerald-500',
-    error: 'bg-red-500',
-  };
-
-  return (
-    <div
-      className={`
-        p-3 rounded-lg border transition-all duration-300
-        ${statusColors[worker.status]}
-      `}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <div className={`w-2.5 h-2.5 rounded-full ${statusDotColors[worker.status]}`} />
-          <span className="text-xs font-mono font-bold text-slate-300">
-            W-{String(worker.id).padStart(2, '0')}
-          </span>
-        </div>
-        {worker.status !== 'idle' && worker.status !== 'complete' && (
-          <span className="text-xs font-mono text-slate-400">
-            {worker.progress}%
-          </span>
-        )}
-      </div>
-      <p className="text-xs text-slate-400 truncate font-mono">
-        {worker.task}
-      </p>
-      {worker.status === 'active' && (
-        <div className="mt-2 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-cyan-500 to-emerald-500 transition-all duration-300"
-            style={{ width: `${worker.progress}%` }}
-          />
-        </div>
-      )}
-      {worker.status === 'complete' && (
-        <div className="mt-2 flex items-center gap-1 text-emerald-400">
-          <CheckIcon className="w-3 h-3" />
-          <span className="text-xs font-mono">Done</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ==================== Legend Item ====================
-
-function LegendItem({ color, label }: { color: string; label: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className={`w-3 h-3 rounded ${color}`} />
-      <span className="text-xs text-slate-400 font-mono">{label}</span>
-    </div>
-  );
-}
-
-// ==================== Icons ====================
-
-function ShieldIcon({ className = "w-6 h-6" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-    </svg>
-  );
-}
-
-function ArrowLeftIcon({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-    </svg>
-  );
-}
-
-function DocumentIcon({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-  );
-}
-
-function ControlIcon({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-    </svg>
-  );
-}
-
-function SwarmIcon({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-    </svg>
-  );
-}
-
-function ChartIcon({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-    </svg>
-  );
-}
-
-function PlayIcon({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
-}
-
-function StopIcon({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-    </svg>
-  );
-}
-
-function ResetIcon({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-    </svg>
-  );
-}
-
-function CheckIcon({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-    </svg>
-  );
-}
-
-function InfoIcon({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
-}
-
-function WarningIcon({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-    </svg>
-  );
-}
-
-function ErrorIcon({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
-}
-
-// ==================== Main Page Component ====================
+/* ─────────────────────────── page export ─────────────────────────── */
 
 export default function AegisPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-cyan-400 via-cyan-500 to-emerald-500 flex items-center justify-center animate-pulse">
-            <ShieldIcon className="w-10 h-10 text-white" />
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-[#09090b]">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-cyan-500/20 bg-cyan-500/10">
+              <Shield className="h-6 w-6 text-cyan-400" strokeWidth={1.5} />
+            </div>
+            <p className="font-mono text-xs text-[#52525b]">Initialising Aegis…</p>
           </div>
-          <p className="text-slate-400 font-mono text-sm">Initializing Aegis...</p>
         </div>
-      </div>
-    }>
+      }
+    >
       <AegisContent />
     </Suspense>
   );
