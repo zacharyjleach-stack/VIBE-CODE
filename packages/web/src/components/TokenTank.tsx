@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 interface Props {
   balance: number;
@@ -9,58 +9,52 @@ interface Props {
   plan: string;
 }
 
-export function TokenTank({ balance, maxBalance, isLifetime, plan }: Props) {
+export function TokenTank({ balance, maxBalance, isLifetime }: Props) {
   const percentage = isLifetime ? 100 : Math.min(100, (balance / maxBalance) * 100);
   const isLow = percentage < 20;
   const isEmpty = balance <= 0;
 
   return (
-    <div className="glass rounded-2xl p-6">
-      <h3 className="text-sm tracking-widest text-[var(--text-dim)] mb-4">TOKEN TANK</h3>
+    <div className="card p-6">
+      <p className="text-xs text-[var(--text-subtle)] uppercase tracking-widest font-medium mb-4">
+        Token Balance
+      </p>
 
       {isLifetime ? (
-        <div className="text-center py-8">
-          <div className="text-4xl mb-2">∞</div>
-          <div className="text-2xl font-bold text-[var(--accent)]">Unlimited</div>
-          <div className="text-sm text-[var(--text-dim)]">Founder's License</div>
+        <div className="flex items-center gap-3 py-4">
+          <span className="text-4xl font-bold text-[var(--accent)]">∞</span>
+          <div>
+            <p className="text-base font-semibold text-[var(--text)]">Unlimited</p>
+            <p className="text-xs text-[var(--text-muted)]">Founder's License</p>
+          </div>
         </div>
       ) : (
         <>
-          {/* Tank visualization */}
-          <div className="relative h-40 bg-[var(--surface)] rounded-xl overflow-hidden mb-4">
-            <motion.div
-              initial={{ height: 0 }}
-              animate={{ height: `${percentage}%` }}
-              transition={{ duration: 1, ease: 'easeOut' }}
-              className={`absolute bottom-0 left-0 right-0 ${
-                isEmpty ? 'bg-red-500/50' :
-                isLow ? 'bg-orange-500/50' :
-                'bg-[var(--accent)]/50'
-              }`}
-              style={{
-                boxShadow: isEmpty ? '0 0 30px rgba(255,59,48,0.5)' :
-                           isLow ? '0 0 30px rgba(255,149,0,0.5)' :
-                           '0 0 30px rgba(124,106,255,0.5)',
-              }}
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-4xl font-bold">{balance.toLocaleString()}</div>
-                <div className="text-sm text-[var(--text-dim)]">tokens remaining</div>
-              </div>
-            </div>
+          <div className="flex items-baseline justify-between mb-3">
+            <span className="text-3xl font-bold text-[var(--text)]">{balance.toLocaleString()}</span>
+            <span className="text-sm text-[var(--text-muted)]">/ {maxBalance.toLocaleString()}</span>
           </div>
 
-          {/* Warning */}
-          {isLow && !isEmpty && (
-            <div className="text-center text-sm text-orange-400">
-              ⚠️ Low balance - consider upgrading
-            </div>
-          )}
+          <div className="h-2 rounded-full bg-[var(--surface-hover)] overflow-hidden mb-3">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ${
+                isEmpty ? 'bg-red-500' : isLow ? 'bg-orange-400' : 'bg-[var(--accent)]'
+              }`}
+              style={{ width: `${percentage}%` }}
+            />
+          </div>
+
           {isEmpty && (
-            <div className="text-center text-sm text-red-400">
-              ❌ Trial expired - upgrade to continue
-            </div>
+            <p className="text-xs text-red-400">
+              Trial exhausted —{' '}
+              <Link href="/billing" className="underline">upgrade to continue</Link>
+            </p>
+          )}
+          {isLow && !isEmpty && (
+            <p className="text-xs text-orange-400">
+              Running low —{' '}
+              <Link href="/billing" className="underline">upgrade for unlimited</Link>
+            </p>
           )}
         </>
       )}

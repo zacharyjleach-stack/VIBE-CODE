@@ -1,4 +1,4 @@
-import { currentUser } from '@clerk/nextjs';
+import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { prisma } from '../../lib/db';
 import { DashboardClient } from '../../components/DashboardClient';
@@ -45,7 +45,7 @@ export default async function DashboardPage() {
         status: dbUser.subscription?.status || 'trialing',
       }}
       history={dbUser.tokenLedger}
-      apiKeys={dbUser.apiKeys.map(k => ({ id: k.id, name: k.name, prefix: k.keyPrefix, createdAt: k.createdAt }))}
+      apiKeys={dbUser.apiKeys.map(k => ({ id: k.id, name: k.name, keyPrefix: k.keyPrefix, createdAt: k.createdAt }))}
     />
   );
 }

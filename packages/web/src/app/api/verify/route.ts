@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 import { checkAccess, spendTokens, TOKEN_COSTS } from '../../../lib/tokens';
 import { prisma } from '../../../lib/db';
 
-// POST /api/verify - The Token Sentry endpoint
-// Called by Aegis CLI/HUD before each AI action
+function hashKey(key: string): string {
+  return createHash('sha256').update(key).digest('hex');
+}
+
+// POST /api/verify — Token Sentry: spend tokens for an action
 export async function POST(request: NextRequest) {
   try {
     const { apiKey, action, projectId } = await request.json();
@@ -16,9 +20,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
 
-    // Find user by API key
+    // Hash raw key before DB lookup (was missing before — critical bug fix)
+    const keyHash = hashKey(apiKey);
+
     const apiKeyRecord = await prisma.apiKey.findFirst({
-      where: { keyHash: apiKey, isRevoked: false },
+      where: { keyHash, isRevoked: false },
       include: { user: true },
     });
 
@@ -26,13 +32,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
     }
 
-    // Update last used
     await prisma.apiKey.update({
       where: { id: apiKeyRecord.id },
       data: { lastUsedAt: new Date() },
     });
 
-    // Spend tokens
     const result = await spendTokens(
       apiKeyRecord.userId,
       action as keyof typeof TOKEN_COSTS,
@@ -44,8 +48,8 @@ export async function POST(request: NextRequest) {
         allowed: false,
         balance: result.newBalance,
         message: result.message,
-        upgradeUrl: 'https://aegis.dev/billing',
-      }, { status: 402 }); // Payment Required
+        upgradeUrl: `${process.env.NEXT_PUBLIC_APP_URL}/billing`,
+      }, { status: 402 });
     }
 
     return NextResponse.json({
@@ -60,16 +64,17 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/verify - Check access without spending
+// GET /api/verify — Check access without spending tokens
 export async function GET(request: NextRequest) {
-  const apiKey = request.headers.get('x-api-key');
-
-  if (!apiKey) {
+  const rawKey = request.headers.get('x-api-key');
+  if (!rawKey) {
     return NextResponse.json({ error: 'Missing API key' }, { status: 401 });
   }
 
+  const keyHash = hashKey(rawKey);
+
   const apiKeyRecord = await prisma.apiKey.findFirst({
-    where: { keyHash: apiKey, isRevoked: false },
+    where: { keyHash, isRevoked: false },
     include: { user: { include: { subscription: true } } },
   });
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs';
+import { currentUser } from '@clerk/nextjs/server';
 import { stripe, PRICES, AMOUNTS } from '../../../lib/stripe';
 import { prisma } from '../../../lib/db';
 
