@@ -115,18 +115,45 @@ export async function healthCheck(): Promise<ApiResponse<{ status: string; versi
 }
 
 /**
+ * Transform Iris frontend VibeContext into the shape Aegis backend expects.
+ * The backend uses flat strings for techStack fields and requires a theme.
+ */
+function buildAegisHandoffBody(vibeContext: VibeContext, dryRun = false) {
+  const { sessionId, techStack, constraints, stylePreferences } = vibeContext;
+
+  return {
+    // sessionId must be a valid UUID — store now generates proper UUIDs
+    sessionId: sessionId || crypto.randomUUID(),
+    priority: 'Medium' as const,
+    dryRun,
+    vibeContext: {
+      userIntent: vibeContext.userIntent || 'Build a web application',
+      techStack: {
+        frontend: techStack.frontend?.name || 'React',
+        backend: techStack.backend?.name || 'Node.js',
+        database: techStack.database?.name || 'PostgreSQL',
+        additional: techStack.additionalServices ?? [],
+      },
+      // Backend expects string[] — map from Constraint objects
+      constraints: constraints.map((c) => `[${c.type}] ${c.description}`),
+      stylePreferences: {
+        // theme is required by the backend schema
+        theme: stylePreferences.colorScheme || 'dark',
+        primaryColor: stylePreferences.primaryColor,
+        darkMode: stylePreferences.colorScheme === 'dark',
+        responsive: true,
+      },
+    },
+  };
+}
+
+/**
  * Submit vibe context for handoff to Aegis
  */
 export async function handoff(vibeContext: VibeContext): Promise<ApiResponse<HandoffResponse>> {
-  const request: HandoffRequest = {
-    vibeContext,
-    priority: 'normal',
-    dryRun: false,
-  };
-
   return apiRequest('/handoff', {
     method: 'POST',
-    body: JSON.stringify(request),
+    body: JSON.stringify(buildAegisHandoffBody(vibeContext, false)),
   });
 }
 
@@ -136,15 +163,9 @@ export async function handoff(vibeContext: VibeContext): Promise<ApiResponse<Han
 export async function validateVibeContext(
   vibeContext: VibeContext
 ): Promise<ApiResponse<HandoffResponse>> {
-  const request: HandoffRequest = {
-    vibeContext,
-    priority: 'normal',
-    dryRun: true,
-  };
-
   return apiRequest('/handoff', {
     method: 'POST',
-    body: JSON.stringify(request),
+    body: JSON.stringify(buildAegisHandoffBody(vibeContext, true)),
   });
 }
 

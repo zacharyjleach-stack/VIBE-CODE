@@ -94,6 +94,18 @@ interface VibeActions {
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
+// Generate a proper UUID v4 — required by Aegis backend sessionId validation
+const generateUUID = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 const initialAgents: AgentSlot[] = Array.from({ length: 16 }, (_, i) => ({
   id: i + 1,
   status: 'idle' as AgentStatus,
@@ -142,7 +154,7 @@ export const useVibeStore = create<VibeState & VibeActions>()(
 
         // Session Actions
         initializeSession: () => {
-          const sessionId = `session_${generateId()}_${Date.now()}`;
+          const sessionId = generateUUID();
           set({ sessionId }, false, 'initializeSession');
 
           // Add welcome message

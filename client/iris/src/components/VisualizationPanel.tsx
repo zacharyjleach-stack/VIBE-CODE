@@ -122,7 +122,19 @@ function AgentSwarmView({ agents, missionId, status }: AgentSwarmViewProps) {
   );
 }
 
-function WorkerSlotCard({ agent, index }: { agent: { id: string; name: string; status: string; currentTask?: string; progress: number }; index: number }) {
+// Normalize status values from both the Zustand store (lowercase) and the
+// Aegis backend (PascalCase) into the PascalCase keys used by style maps.
+function normalizeStatus(status: string): string {
+  const map: Record<string, string> = {
+    idle: 'Idle', working: 'Coding', success: 'Complete',
+    error: 'Error', waiting: 'Idle',
+  };
+  return map[status] ?? status; // PascalCase values pass through unchanged
+}
+
+function WorkerSlotCard({ agent, index }: { agent: { id: string | number; name?: string; status: string; currentTask?: string; progress?: number }; index: number }) {
+  const status = normalizeStatus(agent.status);
+
   const cardStyles: Record<string, string> = {
     Idle: 'border-[#27272a] bg-[#18181b]',
     Initializing: 'border-blue-500/30 bg-blue-500/5',
@@ -153,20 +165,22 @@ function WorkerSlotCard({ agent, index }: { agent: { id: string; name: string; s
     Error: 'bg-red-500',
   };
 
+  const progress = agent.progress ?? 0;
+
   return (
-    <div className={`p-2 rounded-lg border transition-colors ${cardStyles[agent.status] || cardStyles.Idle}`}>
+    <div className={`p-2 rounded-lg border transition-colors ${cardStyles[status] || cardStyles.Idle}`}>
       <div className="flex items-center gap-1.5 mb-1">
-        <div className={`w-1.5 h-1.5 rounded-full ${dotStyles[agent.status] || dotStyles.Idle}`} />
+        <div className={`w-1.5 h-1.5 rounded-full ${dotStyles[status] || dotStyles.Idle}`} />
         <span className="text-[10px] font-semibold text-[#71717a]">#{index + 1}</span>
       </div>
       <p className="text-[10px] text-[#52525b] truncate leading-tight">
-        {agent.currentTask || agent.status}
+        {agent.currentTask || status}
       </p>
-      {agent.progress > 0 && agent.status !== 'Complete' && (
+      {progress > 0 && status !== 'Complete' && (
         <div className="mt-1.5 h-0.5 bg-[#27272a] rounded-full overflow-hidden">
           <div
-            className={`h-full transition-all duration-500 ${barStyles[agent.status] || barStyles.Idle}`}
-            style={{ width: `${agent.progress}%` }}
+            className={`h-full transition-all duration-500 ${barStyles[status] || barStyles.Idle}`}
+            style={{ width: `${progress}%` }}
           />
         </div>
       )}
