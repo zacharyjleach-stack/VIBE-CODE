@@ -54,20 +54,24 @@ export async function POST(request: NextRequest) {
   }
 
   const { fullKey, keyHash, keyPrefix } = generateApiKey();
+  const keyName = name || 'Default Key';
 
-  await prisma.apiKey.create({
+  const created = await prisma.apiKey.create({
     data: {
       userId: dbUser.id,
-      name: name || 'Default Key',
+      name: keyName,
       keyHash,
       keyPrefix,
     },
+    select: { id: true, name: true, keyPrefix: true },
   });
 
   // Return the full key ONCE — it cannot be retrieved again
   return NextResponse.json({
     key: fullKey,
-    prefix: keyPrefix,
+    id: created.id,
+    name: created.name,
+    keyPrefix: created.keyPrefix,
     message: 'Save this key now — it will not be shown again.',
   });
 }
