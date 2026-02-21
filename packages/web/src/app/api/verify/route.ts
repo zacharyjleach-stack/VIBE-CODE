@@ -16,8 +16,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing apiKey or action' }, { status: 400 });
     }
 
-    if (!TOKEN_COSTS[action as keyof typeof TOKEN_COSTS]) {
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    if (!(action in TOKEN_COSTS)) {
+      return NextResponse.json({ error: `Invalid action. Valid actions: ${Object.keys(TOKEN_COSTS).join(', ')}` }, { status: 400 });
     }
 
     // Hash raw key before DB lookup (was missing before — critical bug fix)

@@ -21,13 +21,13 @@ export async function checkAccess(userId: string): Promise<{
     return { allowed: false, balance: 0, isLifetime: false, plan: 'none' };
   }
 
-  // Lifetime license = unlimited
+  // Lifetime license = unlimited access
   if (user.lifetimeLicense) {
-    return { allowed: true, balance: Infinity, isLifetime: true, plan: 'lifetime' };
+    return { allowed: true, balance: user.tokenBalance, isLifetime: true, plan: 'lifetime' };
   }
 
-  // Active subscription = unlimited (within plan limits)
-  if (user.subscription?.status === 'active') {
+  // Active Pro subscription = unlimited access
+  if (user.subscription?.status === 'active' && user.subscription?.plan === 'pro') {
     return { allowed: true, balance: user.tokenBalance, isLifetime: false, plan: 'pro' };
   }
 
@@ -53,7 +53,7 @@ export async function spendTokens(
   }
 
   if (access.isLifetime || access.plan === 'pro') {
-    // No token deduction for paid users
+    // Paid users — record action but do not deduct tokens
     await prisma.tokenLedger.create({
       data: {
         userId,
@@ -62,15 +62,15 @@ export async function spendTokens(
         amount: 0,
         balanceAfter: access.balance,
         projectId,
-        description: `${action} (paid plan - no charge)`,
+        description: `${action} (paid plan)`,
       },
     });
     return { success: true, newBalance: access.balance };
   }
 
-  // Free tier - deduct tokens
+  // Free tier — deduct tokens
   if (access.balance < cost) {
-    return { success: false, newBalance: access.balance, message: 'Insufficient tokens.' };
+    return { success: false, newBalance: access.balance, message: 'Insufficient tokens. Please upgrade.' };
   }
 
   const newBalance = access.balance - cost;
@@ -88,7 +88,7 @@ export async function spendTokens(
         amount: cost,
         balanceAfter: newBalance,
         projectId,
-        description: `${action} (-${cost} tokens)`,
+        description: `${action} (−${cost} tokens)`,
       },
     }),
   ]);
