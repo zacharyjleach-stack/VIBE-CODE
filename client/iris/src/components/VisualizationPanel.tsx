@@ -122,12 +122,18 @@ function AgentSwarmView({ agents, missionId, status }: AgentSwarmViewProps) {
   );
 }
 
-// Normalize status values from both the Zustand store (lowercase) and the
-// Aegis backend (PascalCase) into the PascalCase keys used by style maps.
+// Normalize status strings into the PascalCase keys used by style maps.
+// Sources:
+//   - Zustand store AgentStatus: 'idle' | 'working' | 'success' | 'error' | 'waiting'
+//   - Aegis internal AgentStatusType: 'idle' | 'initializing' | 'coding' | 'testing' | 'complete' | 'error' | 'terminated'
+//   - Aegis shared protocol AgentStatus (PascalCase): Idle | Initializing | Coding | … (pass-through)
 function normalizeStatus(status: string): string {
   const map: Record<string, string> = {
-    idle: 'Idle', working: 'Coding', success: 'Complete',
-    error: 'Error', waiting: 'Idle',
+    // Zustand store values
+    idle: 'Idle', working: 'Coding', success: 'Complete', error: 'Error', waiting: 'Idle',
+    // Aegis backend internal values (lowercase)
+    initializing: 'Initializing', coding: 'Coding', testing: 'Testing',
+    complete: 'Complete', terminated: 'Idle',
   };
   return map[status] ?? status; // PascalCase values pass through unchanged
 }
